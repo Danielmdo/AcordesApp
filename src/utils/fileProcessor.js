@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system';
+import { Platform } from 'react-native';
 import mammoth from 'mammoth';
 
 let fileCounter = 0;
@@ -66,6 +67,44 @@ function getFileType(fileName, mimeType) {
   return 'unknown';
 }
 
+// Safe base64 decode that works without native atob (Hermes compatible)
+function base64ToBytes(base64) {
+  try {
+    if (typeof atob === 'function') {
+      const binaryStr = atob(base64);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+      return bytes;
+    }
+  } catch (e) {
+    // atob failed, fall through to manual decoder
+  }
+  // Manual base64 decode (works without atob)
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const lookup = {};
+  for (let i = 0; i < chars.length; i++) lookup[chars[i]] = i;
+  lookup['='] = 0;
+  lookup['-'] = 62; // base64url
+  lookup['_'] = 63;
+  
+  // Remove whitespace
+  const clean = base64.replace(/[^A-Za-z0-9+\/=]/g, '');
+  const len = clean.length;
+  const bytes = [];
+  for (let i = 0; i < len; i += 4) {
+    const c1 = lookup[clean[i]];
+    const c2 = lookup[clean[i + 1]];
+    const c3 = lookup[clean[i + 2]];
+    const c4 = lookup[clean[i + 3]];
+    bytes.push((c1 << 2) | (c2 >> 4));
+    if (clean[i + 2] !== '=') bytes.push(((c2 & 0xf) << 4) | (c3 >> 2));
+    if (clean[i + 3] !== '=') bytes.push(((c3 & 3) << 6) | c4);
+  }
+  return new Uint8Array(bytes);
+}
+
 /**
  * Extract page count from PDF by parsing the raw text header.
  * Tries multiple methods for broader compatibility.
@@ -73,7 +112,11 @@ function getFileType(fileName, mimeType) {
 function extractPDFPageCount(base64) {
   try {
     const chunk = base64.substring(0, Math.min(base64.length, 80000));
-    const binaryStr = atob(chunk);
+    const binaryBytes = base64ToBytes(chunk);
+    let binaryStr = '';
+    for (let j = 0; j < binaryBytes.length; j += 16384) {
+      binaryStr += String.fromCharCode.apply(null, binaryBytes.subarray(j, j + 16384));
+    }
 
     // Method 1: Count /Type /Page entries (individual page objects, not the tree node /Type /Pages)
     const pageEntries = binaryStr.match(/\/Type\s*\/Page(?:[^s]|$)/g);
@@ -149,15 +192,11 @@ async function processDocx(file, fileId, fileName) {
       encoding: FileSystem.EncodingType.Base64,
     });
 
-    // Convert base64 to ArrayBuffer for mammoth
-    const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
+    // Convert base64 to ArrayBuffer for mammoth (safe for Hermes without atob)
+    const rawBytes = base64ToBytes(base64);
 
     const result = await mammoth.convertToHtml({
-      arrayBuffer: bytes.buffer,
+      arrayBuffer: rawBytes.buffer,
     });
 
     const html = result.value;
