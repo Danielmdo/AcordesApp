@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AcordesApp">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>AcordesApp - Visor de Documentos</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Session List Screen -->
+  <div id="sessionListScreen" class="screen active">
+    <div class="screen-header">
+      <h1 class="app-title">AcordesApp</h1>
+      <p class="app-subtitle">Visor de Documentos</p>
+    </div>
+
+    <div id="emptyState" class="empty-state">
+      <div class="empty-icon">📂</div>
+      <h2 class="empty-title">No hay sesiones</h2>
+      <p class="empty-text">Crea una sesión para comenzar a organizar tus documentos</p>
+      <button class="btn btn-primary" onclick="showCreateModal()">+ Nueva Sesión</button>
+    </div>
+
+    <div id="sessionList" class="session-list"></div>
+
+    <div class="fab-container">
+      <button class="fab" onclick="showCreateModal()" id="fabAdd">+</button>
+    </div>
+  </div>
+
+  <!-- Session Viewer Screen -->
+  <div id="sessionViewerScreen" class="screen">
+    <div class="viewer-header">
+      <button class="btn-back" onclick="goBackToSessions()" id="btnBack">‹</button>
+      <div class="viewer-header-info">
+        <span id="viewerSessionName" class="viewer-session-name"></span>
+        <span id="viewerFileName" class="viewer-file-name"></span>
+      </div>
+      <button class="btn-add-file" onclick="pickFiles()">+</button>
+    </div>
+    <div class="progress-bar" id="progressBar"></div>
+    <div class="pager-container" id="pagerContainer">
+      <div class="pager" id="pager"></div>
+    </div>
+    <div class="empty-viewer" id="emptyViewer">
+      <p class="empty-viewer-text">Aún no hay archivos en esta sesión</p>
+      <button class="btn btn-primary" onclick="pickFiles()">Agregar Archivos</button>
+    </div>
+    <button class="nav-arrow nav-left" id="navLeft" onclick="navigatePage(-1)">‹</button>
+    <button class="nav-arrow nav-right" id="navRight" onclick="navigatePage(1)">›</button>
+    <div class="page-indicator" id="pageIndicator"></div>
+  </div>
+
+  <!-- Create Session Modal -->
+  <div class="modal-overlay" id="createModal">
+    <div class="modal">
+      <h2 class="modal-title">Nueva Sesión</h2>
+      <p class="modal-text">Ingresa un nombre para la sesión de documentos</p>
+      <input type="text" class="modal-input" id="sessionNameInput" placeholder="Ej: Documentos del proyecto" maxlength="50" autofocus>
+      <div class="modal-buttons">
+        <button class="btn btn-secondary" onclick="hideCreateModal()">Cancelar</button>
+        <button class="btn btn-primary" id="btnCreateSession" onclick="handleCreateSession()">Crear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- File Input (hidden) -->
+  <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.webp,.docx,.doc" style="display:none">
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <p id="loadingText">Procesando archivos...</p>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.0/mammoth.browser.min.js"></script>
+  <script src="sessionManager.js"></script>
+  <script src="fileProcessor.js"></script>
+  <script src="pageRenderer.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
