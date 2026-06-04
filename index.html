@@ -35,6 +35,9 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 .session-card-meta{font-size:13px;color:var(--text-secondary);margin-top:4px;font-weight:400}
 .session-card-date{font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px;font-weight:500;margin-top:6px}
 .session-card-arrow{font-size:22px;color:var(--text-tertiary);margin-left:10px;opacity:.6;flex-shrink:0}
+.session-card-delete{width:36px;height:36px;border-radius:10px;background:rgba(225,112,85,0.12);border:none;color:var(--danger);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0;transition:all .2s;margin-left:4px}
+.session-card:hover .session-card-delete,.session-card:active .session-card-delete{opacity:1}
+.session-card-delete:active{background:rgba(225,112,85,0.25);transform:scale(.9)}
 .fab-container{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom,0px));right:24px;z-index:50}
 .fab{width:60px;height:60px;border-radius:30px;background:linear-gradient(135deg,var(--primary),#8b7cf7);color:#fff;border:none;font-size:30px;cursor:pointer;box-shadow:0 6px 24px rgba(108,92,231,0.4);transition:all .2s cubic-bezier(.25,.46,.45,.94);display:flex;align-items:center;justify-content:center;position:relative}
 .fab::after{content:'';position:absolute;inset:-3px;border-radius:33px;background:linear-gradient(135deg,var(--primary),var(--accent));z-index:-1;opacity:.3;filter:blur(12px)}
@@ -234,6 +237,79 @@ window.App.getSessionFiles=function(sessionId){return[...getFileStore(sessionId)
 window.App.setSessionFiles=function(sessionId,files){const session=window.App.getSession(sessionId);if(!session)return;fileDataStore[sessionId]=files;session.fileCount=files.length;session.updatedAt=new Date().toISOString();saveSessions()};
 window.App.updateSessionPages=function(sessionId,pageCount){const session=window.App.getSession(sessionId);if(!session)return;session.pageCount=pageCount;saveSessions()};
 loadSessions();
+
+// IndexedDB helpers for file persistence
+async function getFileDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('acordesapp_files', 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('files')) {
+        db.createObjectStore('files', { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+window.App.saveFilesToDB = async function(sessionId, fileList) {
+  try {
+    const db = await getFileDB();
+    const tx = db.transaction('files', 'readwrite');
+    const store = tx.objectStore('files');
+    for (let i = 0; i < fileList.length; i++) {
+      const f = fileList[i];
+      const ab = await f.arrayBuffer();
+      store.put({ id: `${sessionId}_idx_${i}`, fileName: f.name, fileType: f.type, data: ab });
+    }
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    return true;
+  } catch(e) {
+    console.warn('IndexedDB save failed:', e);
+    return false;
+  }
+};
+
+window.App.loadFilesFromDB = async function(sessionId) {
+  try {
+    const db = await getFileDB();
+    const tx = db.transaction('files', 'readonly');
+    const store = tx.objectStore('files');
+    const range = IDBKeyRange.bound(sessionId + '_idx_', sessionId + '_idx_\\uffff');
+    const req = store.getAll(range);
+    const items = await new Promise((resolve, reject) => {
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+    return items.map(item => {
+      const blob = new Blob([item.data], { type: item.fileType || 'application/octet-stream' });
+      return new File([blob], item.fileName, { type: item.fileType || 'application/octet-stream' });
+    });
+  } catch(e) {
+    console.warn('IndexedDB load failed:', e);
+    return [];
+  }
+};
+
+window.App.deleteSessionFilesFromDB = async function(sessionId) {
+  try {
+    const db = await getFileDB();
+    const tx = db.transaction('files', 'readwrite');
+    const store = tx.objectStore('files');
+    const range = IDBKeyRange.bound(sessionId + '_idx_', sessionId + '_idx_\\uffff');
+    store.delete(range);
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch(e) {
+    console.warn('IndexedDB delete failed:', e);
+  }
+};
 </script>
 <script>
 // fileProcessor.js embedded
@@ -281,21 +357,22 @@ list.innerHTML=sessions.map((s,i)=>`
 <div class="session-card-info"><div class="session-card-name">${escapeHtml(s.name)}</div>
 <div class="session-card-meta">${s.fileCount>0?`${s.fileCount} archivo${s.fileCount!==1?'s':''} &middot; ${s.pageCount} p\u00e1gina${s.pageCount!==1?'s':''}`:'Sin archivos'}</div>
 <div class="session-card-date">${new Date(s.createdAt).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}</div></div>
+<button class="session-card-delete" onclick="event.stopPropagation();deleteSessionConfirm('${s.id}')" title="Eliminar sesi\u00f3n">🗑</button>
 <div class="session-card-arrow">&#8250;</div></div>`).join('')}
 
 function showCreateModal(){document.getElementById('createModal').classList.add('active');document.getElementById('sessionNameInput').value='';setTimeout(()=>document.getElementById('sessionNameInput').focus(),100)}
 function hideCreateModal(){document.getElementById('createModal').classList.remove('active')}
 function handleCreateSession(){const input=document.getElementById('sessionNameInput');const name=input.value.trim();if(!name){input.style.borderColor='#e17055';setTimeout(()=>input.style.borderColor='',1000);return}
 window.App.createSession(name);hideCreateModal();renderSessionList()}
-function deleteSessionConfirm(sessionId){const session=window.App.getSession(sessionId);if(!session)return;if(confirm(`\u00bfEliminar "${session.name}"? Los archivos de esta sesi\u00f3n se perder\u00e1n.`)){window.App.deleteSession(sessionId);renderSessionList()}}
+async function deleteSessionConfirm(sessionId){const session=window.App.getSession(sessionId);if(!session)return;if(confirm(`\u00bfEliminar "${session.name}"? Los archivos de esta sesi\u00f3n se perder\u00e1n.`)){window.App.deleteSession(sessionId);await window.App.deleteSessionFilesFromDB(sessionId);renderSessionList()}}
 
-function openSession(sessionId){currentSessionId=sessionId;currentIndex=0;currentPages=[];const session=window.App.getSession(sessionId);if(!session)return
-document.getElementById('sessionListScreen').classList.remove('active');document.getElementById('sessionViewerScreen').classList.add('active');document.getElementById('viewerSessionName').textContent=session.name;const files=window.App.getSessionFiles(sessionId);if(files&&files.length>0){processAndShowFiles(sessionId,files)}else{showEmptyViewer()}}
+async function openSession(sessionId){currentSessionId=sessionId;currentIndex=0;currentPages=[];const session=window.App.getSession(sessionId);if(!session)return
+document.getElementById('sessionListScreen').classList.remove('active');document.getElementById('sessionViewerScreen').classList.add('active');document.getElementById('viewerSessionName').textContent=session.name;let files=window.App.getSessionFiles(sessionId);if(!files||files.length===0){files=await window.App.loadFilesFromDB(sessionId);if(files&&files.length>0){window.App.setSessionFiles(sessionId,files)}}if(files&&files.length>0){processAndShowFiles(sessionId,files)}else{showEmptyViewer()}}
 function goBackToSessions(){currentSessionId=null;currentPages=[];currentIndex=0;currentPages.forEach(p=>{if(p.url)URL.revokeObjectURL(p.url)});document.getElementById('sessionViewerScreen').classList.remove('active');document.getElementById('sessionListScreen').classList.add('active');renderSessionList()}
 function showEmptyViewer(){document.getElementById('emptyViewer').classList.add('active');document.getElementById('pager').innerHTML='';document.getElementById('progressBar').innerHTML='';document.getElementById('pageIndicator').textContent='';document.getElementById('navLeft').classList.remove('active');document.getElementById('navRight').classList.remove('active');document.getElementById('viewerFileName').textContent='Sin archivos'}
 function pickFiles(){document.getElementById('fileInput').click()}
 async function handleFileSelected(e){const fileArray=Array.from(e.target.files);if(!fileArray||fileArray.length===0)return;e.target.value='';await processAndShowFiles(currentSessionId,fileArray)}
-async function processAndShowFiles(sessionId,files){showLoading('Procesando archivos...');try{const newPages=await processFiles(files);currentPages=currentPages.concat(newPages);const existing=window.App.getSessionFiles(sessionId);window.App.setSessionFiles(sessionId,existing.concat(files));window.App.updateSessionPages(sessionId,currentPages.length);currentIndex=0;renderPager();showToast(`\u2713 ${newPages.length} p\u00e1gina${newPages.length!==1?'s':''} agregada${newPages.length!==1?'s':''}`)}catch(e){console.error('Error processing files:',e);showToast('Error al procesar archivos')}finally{hideLoading()}}
+async function processAndShowFiles(sessionId,files){showLoading('Procesando archivos...');try{const newPages=await processFiles(files);currentPages=currentPages.concat(newPages);const existing=window.App.getSessionFiles(sessionId);window.App.setSessionFiles(sessionId,existing.concat(files));window.App.updateSessionPages(sessionId,currentPages.length);currentIndex=0;renderPager();showToast(`\u2713 ${newPages.length} p\u00e1gina${newPages.length!==1?'s':''} agregada${newPages.length!==1?'s':''}`);window.App.saveFilesToDB(sessionId,files)}catch(e){console.error('Error processing files:',e);showToast('Error al procesar archivos')}finally{hideLoading()}}
 function renderPager(){document.getElementById('emptyViewer').classList.remove('active');if(currentPages.length===0){showEmptyViewer();return}
 const pager=document.getElementById('pager');pager.innerHTML='';currentPages.forEach(page=>{pager.appendChild(createPageElement(page))});updatePagerPosition();updateProgressBar();updateNavigation();updateFileInfo();renderVisiblePDFs()}
 function updatePagerPosition(){document.getElementById('pager').style.transform=`translateX(${-currentIndex*100}%)`}
