@@ -319,8 +319,10 @@ export async function getPDFJSCode() {
  * @param {string|null} pdfJsCode - Inline PDF.js source code, or null to fall back to CDN
  */
 export function createPDFViewerHTML(base64, pageNumber, pdfJsCode) {
-  const scriptTag = pdfJsCode
-    ? `<script>${pdfJsCode}</script>`
+  // Escape </script> in inlined code to prevent HTML parsing issues
+  const escapedCode = pdfJsCode ? pdfJsCode.replace(/<\/script>/gi, '<\\/script>') : null;
+  const scriptTag = escapedCode
+    ? `<script>${escapedCode}</script>`
     : '<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>';
   return `
 <!DOCTYPE html>
