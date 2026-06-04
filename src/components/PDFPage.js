@@ -4,7 +4,6 @@ import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system';
 import { createPDFViewerHTML, getPDFBase64 } from '../utils/fileProcessor';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function PDFPage({ fileId, pageNumber }) {
   const [htmlUri, setHtmlUri] = useState(null);
@@ -114,50 +113,3 @@ const styles = StyleSheet.create({
   },
 });
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    marginHorizontal: 8,
-    marginVertical: 4,
-    borderRadius: 8,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  webview: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    height: SCREEN_HEIGHT - 180,
-  },
-  loadingContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 15,
-    color: '#e74c3c',
-    textAlign: 'center',
-  },
-});
