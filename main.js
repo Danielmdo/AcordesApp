@@ -179,8 +179,10 @@ async function processAndShowFiles(sessionId, files) {
     // Reset to first page
     currentIndex = 0;
     renderPager();
+    showToast(`✓ ${newPages.length} página${newPages.length !== 1 ? 's' : ''} agregada${newPages.length !== 1 ? 's' : ''}`);
   } catch (e) {
     console.error('Error processing files:', e);
+    showToast('Error al procesar archivos');
   } finally {
     hideLoading();
   }
@@ -345,6 +347,15 @@ function showLoading(text) {
 
 function hideLoading() {
   document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+// --- Toast ---
+function showToast(message, duration = 2500) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('active');
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => toast.classList.remove('active'), duration);
 }
 
 // --- Utils ---
