@@ -160,8 +160,8 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 
 <div class="toast" id="toast"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.0/mammoth.browser.min.js"></script>
 <script>
 // sessionManager.js embedded
 window.App = window.App || {};
@@ -204,7 +204,8 @@ function renderPDFOnDemand(page){if(page._rendered||!page._container)return;page
 // main.js embedded
 let currentSessionId=null,currentPages=[],currentIndex=0,isDragging=false,dragStartX=0,dragOffset=0;
 document.addEventListener('DOMContentLoaded',()=>{
-pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+// Disable worker to avoid CORB issues with cross-origin CDN
+pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 document.getElementById('sessionNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')handleCreateSession()});
 document.getElementById('fileInput').addEventListener('change',handleFileSelected);
 const pager=document.getElementById('pager');
