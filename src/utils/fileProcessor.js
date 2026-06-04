@@ -1,5 +1,4 @@
 import * as FileSystem from 'expo-file-system';
-import { Platform } from 'react-native';
 import mammoth from 'mammoth';
 
 let fileCounter = 0;
