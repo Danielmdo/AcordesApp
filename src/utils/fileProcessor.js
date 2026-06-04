@@ -194,8 +194,9 @@ async function processDocx(file, fileId, fileName) {
     // Convert base64 to ArrayBuffer for mammoth (safe for Hermes without atob)
     const rawBytes = base64ToBytes(base64);
 
+    // Metro uses Node.js version of mammoth/unzip which expects {buffer} not {arrayBuffer}
     const result = await mammoth.convertToHtml({
-      arrayBuffer: rawBytes.buffer,
+      buffer: rawBytes.buffer,
     });
 
     const html = result.value;
@@ -262,6 +263,7 @@ function splitDocxIntoPages(html) {
 }
 
 let pdfJSLocalPath = null;
+let pdfJSCode = null;
 const PDFJS_CACHE_FILE = `${FileSystem.cacheDirectory}pdfjs/pdf.min.js`;
 
 /**
@@ -276,7 +278,6 @@ export async function getPDFJSLocalPath() {
       pdfJSLocalPath = PDFJS_CACHE_FILE;
       return pdfJSLocalPath;
     }
-    // Download PDF.js to local cache
     const dir = PDFJS_CACHE_FILE.substring(0, PDFJS_CACHE_FILE.lastIndexOf('/'));
     await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
     const result = await FileSystem.downloadAsync(
@@ -286,21 +287,40 @@ export async function getPDFJSLocalPath() {
     pdfJSLocalPath = result.uri;
     return pdfJSLocalPath;
   } catch (e) {
-    console.warn('Could not download PDF.js locally, will try CDN fallback:', e.message);
+    console.warn('Could not download PDF.js locally:', e.message);
+    return null;
+  }
+}
+
+/**
+ * Get PDF.js source code as a string for inline embedding in HTML.
+ * Downloads PDF.js if not already cached, then reads it as text.
+ * This avoids file:// script loading restrictions in Android WebView.
+ */
+export async function getPDFJSCode() {
+  if (pdfJSCode) return pdfJSCode;
+  try {
+    const localPath = await getPDFJSLocalPath();
+    if (!localPath) return null;
+    const code = await FileSystem.readAsStringAsync(localPath);
+    pdfJSCode = code;
+    return pdfJSCode;
+  } catch (e) {
+    console.warn('Could not read PDF.js code:', e.message);
     return null;
   }
 }
 
 /**
  * Create PDF.js HTML for rendering a specific PDF page.
- * Uses canvas to render the PDF page at high quality.
+ * The PDF.js code is inlined in a <script> tag to avoid file:// script loading restrictions.
  * @param {string} base64 - Base64-encoded PDF data
  * @param {number} pageNumber - Page number to render (1-indexed)
- * @param {string|null} localScriptPath - Local file:// path to pdf.min.js, or null to use CDN
+ * @param {string|null} pdfJsCode - Inline PDF.js source code, or null to fall back to CDN
  */
-export function createPDFViewerHTML(base64, pageNumber, localScriptPath) {
-  const scriptTag = localScriptPath
-    ? `<script src="${localScriptPath}"></script>`
+export function createPDFViewerHTML(base64, pageNumber, pdfJsCode) {
+  const scriptTag = pdfJsCode
+    ? `<script>${pdfJsCode}</script>`
     : '<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>';
   return `
 <!DOCTYPE html>

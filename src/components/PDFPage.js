@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system';
-import { createPDFViewerHTML, getPDFBase64, getPDFJSLocalPath } from '../utils/fileProcessor';
+import { createPDFViewerHTML, getPDFBase64, getPDFJSCode } from '../utils/fileProcessor';
 
 
 export default function PDFPage({ fileId, pageNumber }) {
@@ -11,10 +11,10 @@ export default function PDFPage({ fileId, pageNumber }) {
   const [pdfjsReady, setPdfjsReady] = useState(false);
   const base64 = getPDFBase64(fileId);
 
-  // Download PDF.js locally on mount
+  // Download and cache PDF.js code on mount
   useEffect(() => {
     (async () => {
-      await getPDFJSLocalPath();
+      await getPDFJSCode();
       setPdfjsReady(true);
     })();
   }, []);
@@ -27,8 +27,10 @@ export default function PDFPage({ fileId, pageNumber }) {
     }
     (async () => {
       try {
-        const localScriptPath = await getPDFJSLocalPath();
-        const html = createPDFViewerHTML(base64, pageNumber, localScriptPath);
+        // Get PDF.js source code and inline it directly in the HTML
+        // This avoids file:// script loading restrictions in Android WebView
+        const code = await getPDFJSCode();
+        const html = createPDFViewerHTML(base64, pageNumber, code);
         const path = `${FileSystem.cacheDirectory}pdf_${fileId}_p${pageNumber}.html`;
         await FileSystem.writeAsStringAsync(path, html);
         setHtmlUri(path);
