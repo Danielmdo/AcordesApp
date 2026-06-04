@@ -1,123 +1,272 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0f0f1a">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="AcordesApp">
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <title>AcordesApp - Visor de Documentos</title>
-  <link rel="stylesheet" href="style.css?v=2">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0f0f1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AcordesApp">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>AcordesApp - Visor de Documentos</title>
+<style>
+:root{--bg-primary:#0f0f1a;--bg-secondary:#1a1a2e;--bg-card:#1e1e3a;--bg-card-hover:#252545;--bg-modal:#222244;--bg-glass:rgba(255,255,255,0.05);--bg-glass-hover:rgba(255,255,255,0.08);--primary:#6c5ce7;--primary-light:#a29bfe;--primary-glow:rgba(108,92,231,0.3);--accent:#fd79a8;--accent-light:#fab1c8;--success:#00b894;--warning:#fdcb6e;--danger:#e17055;--text:#fff;--text-secondary:#b0b0c8;--text-tertiary:#6c6c8a;--radius-sm:10px;--radius-md:16px;--radius-lg:24px;--shadow-sm:0 2px 8px rgba(0,0,0,0.2);--shadow-md:0 8px 32px rgba(0,0,0,0.3);--shadow-lg:0 16px 48px rgba(0,0,0,0.4);--shadow-glow:0 0 40px rgba(108,92,231,0.15)}
+*,::after,::before{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;background:var(--bg-primary);color:var(--text);overflow:hidden;user-select:none;-webkit-user-select:none}
+body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at 30% 20%,rgba(108,92,231,0.08) 0%,transparent 50%),radial-gradient(ellipse at 70% 80%,rgba(253,121,168,0.06) 0%,transparent 50%);pointer-events:none;z-index:0}
+.screen{display:none;height:100%;width:100%;position:absolute;top:0;left:0;z-index:1}.screen.active{display:flex;flex-direction:column}
+.screen-header{padding:calc(56px + env(safe-area-inset-top,0px)) 24px 20px;flex-shrink:0;position:relative;z-index:2}
+.app-title{font-size:34px;font-weight:800;letter-spacing:-.5px;background:linear-gradient(135deg,#fff 30%,var(--primary-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1}
+.app-subtitle{font-size:15px;color:var(--text-secondary);margin-top:4px;font-weight:400;letter-spacing:.2px}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center;position:relative;z-index:2}
+.empty-icon-wrapper{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,var(--bg-card),var(--bg-modal));display:flex;align-items:center;justify-content:center;font-size:44px;margin-bottom:28px;position:relative;box-shadow:var(--shadow-md),var(--shadow-glow)}
+.empty-icon-wrapper::before{content:'';position:absolute;inset:-2px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));z-index:-1;opacity:.4}
+.empty-title{font-size:24px;font-weight:700;margin-bottom:10px;color:var(--text)}
+.empty-text{font-size:15px;color:var(--text-secondary);line-height:1.6;max-width:300px;margin-bottom:32px}
+.session-list{flex:1;overflow-y:auto;padding:4px 16px 120px;-webkit-overflow-scrolling:touch;position:relative;z-index:2}
+.session-card{display:flex;align-items:center;background:var(--bg-card);border:1px solid rgba(255,255,255,0.06);border-radius:var(--radius-md);padding:18px 16px;margin-bottom:12px;cursor:pointer;transition:all .25s cubic-bezier(.25,.46,.45,.94);position:relative;overflow:hidden}
+.session-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,rgba(108,92,231,0.03),transparent);opacity:0;transition:opacity .3s}
+.session-card:active::before,.session-card:hover::before{opacity:1}
+.session-card:active{transform:scale(.97);border-color:rgba(108,92,231,0.2)}
+.session-card-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-right:14px;flex-shrink:0;position:relative}
+.session-card-info{flex:1;min-width:0}
+.session-card-name{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.session-card-meta{font-size:13px;color:var(--text-secondary);margin-top:4px;font-weight:400}
+.session-card-date{font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px;font-weight:500;margin-top:6px}
+.session-card-arrow{font-size:22px;color:var(--text-tertiary);margin-left:10px;opacity:.6;flex-shrink:0}
+.fab-container{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom,0px));right:24px;z-index:50}
+.fab{width:60px;height:60px;border-radius:30px;background:linear-gradient(135deg,var(--primary),#8b7cf7);color:#fff;border:none;font-size:30px;cursor:pointer;box-shadow:0 6px 24px rgba(108,92,231,0.4);transition:all .2s cubic-bezier(.25,.46,.45,.94);display:flex;align-items:center;justify-content:center;position:relative}
+.fab::after{content:'';position:absolute;inset:-3px;border-radius:33px;background:linear-gradient(135deg,var(--primary),var(--accent));z-index:-1;opacity:.3;filter:blur(12px)}
+.fab:active{transform:scale(.92)}
+.viewer-header{display:flex;align-items:center;padding:calc(48px + env(safe-area-inset-top,0px)) 16px 10px;gap:12px;flex-shrink:0;z-index:20;position:relative;background:linear-gradient(180deg,var(--bg-primary) 60%,transparent)}
+.btn-back{width:38px;height:38px;border-radius:12px;background:var(--bg-glass);border:1px solid rgba(255,255,255,0.06);color:var(--text);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;backdrop-filter:blur(10px)}
+.btn-back:active{background:var(--bg-glass-hover);transform:scale(.95)}
+.viewer-header-center{flex:1;min-width:0;text-align:center}
+.viewer-session-name{font-size:11px;color:var(--primary-light);font-weight:600;text-transform:uppercase;letter-spacing:.8px;display:block;opacity:.8}
+.viewer-file-name{font-size:15px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.btn-add-file{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--primary),#8b7cf7);border:none;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 16px rgba(108,92,231,0.3);transition:all .2s}
+.btn-add-file:active{transform:scale(.92)}
+.progress-bar{display:flex;gap:4px;padding:2px 16px 10px;flex-shrink:0;position:relative;z-index:10}
+.progress-dot{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,0.08);transition:all .3s cubic-bezier(.25,.46,.45,.94)}
+.progress-dot.active{background:linear-gradient(90deg,var(--primary),var(--primary-light));height:4px;box-shadow:0 0 8px rgba(108,92,231,0.4)}
+.progress-dot.seen{background:rgba(108,92,231,0.4)}
+.pager-container{flex:1;position:relative;overflow:hidden;z-index:5}
+.pager{display:flex;height:100%;transition:transform .35s cubic-bezier(.22,1,.36,1);will-change:transform}
+.pager.dragging{transition:none}
+.page{min-width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:0 6px;overflow:hidden}
+.page-image{max-width:100%;max-height:100%;object-fit:contain;border-radius:12px;background:var(--bg-card);box-shadow:var(--shadow-md)}
+.page-pdf-container{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#f0f0f5;border-radius:12px;overflow:hidden;box-shadow:var(--shadow-md)}
+.page-pdf-container canvas{max-width:100%;max-height:100%;border-radius:4px;background:#fff}
+.page-docx{width:100%;height:100%;background:#fff;border-radius:12px;overflow-y:auto;padding:32px 28px;font-family:-apple-system,Georgia,'Times New Roman',serif;color:#1a1a2e;line-height:1.8;font-size:15px;box-shadow:var(--shadow-md);-webkit-overflow-scrolling:touch}
+.page-docx p{margin-bottom:16px}
+.page-docx h1{font-size:24px;margin-top:24px;margin-bottom:12px;color:#111;font-weight:700}
+.page-docx h2{font-size:20px;margin-top:20px;margin-bottom:10px;color:#1a1a2e;font-weight:600}
+.page-docx h3{font-size:17px;margin-top:18px;margin-bottom:8px;color:#2d2d3f;font-weight:600}
+.page-docx img{max-width:100%;height:auto;border-radius:8px;box-shadow:var(--shadow-sm)}
+.page-docx ol,.page-docx ul{padding-left:28px;margin-bottom:16px}.page-docx li{margin-bottom:8px}
+.page-docx table{width:100%;border-collapse:collapse;margin-bottom:16px;border-radius:8px;overflow:hidden}
+.page-docz td,.page-docx th{border:1px solid #e0e0e8;padding:10px 14px;text-align:left;font-size:14px}
+.page-docx th{background:#f5f5fa;font-weight:600;color:#1a1a2e}
+.page-docx blockquote{border-left:4px solid var(--primary);margin:16px 0;padding:12px 20px;background:#f5f5fa;border-radius:0 8px 8px 0;color:#444;font-style:italic}
+.empty-viewer{display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:40px;text-align:center;position:relative;z-index:5}
+.empty-viewer.active{display:flex}
+.empty-viewer-icon{width:80px;height:80px;border-radius:20px;background:var(--bg-glass);display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.06)}
+.empty-viewer-text{font-size:16px;color:var(--text-secondary);margin-bottom:24px;font-weight:400}
+.nav-arrow{position:fixed;top:55%;transform:translateY(-50%);width:44px;height:72px;background:var(--bg-glass);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);border-radius:12px;color:rgba(255,255,255,0.5);font-size:32px;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:15;transition:all .2s}
+.nav-arrow:active{background:var(--bg-glass-hover);color:#fff}
+.nav-arrow.active{display:flex}.nav-left{left:8px}.nav-right{right:8px}
+.page-indicator{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);font-size:12px;color:rgba(255,255,255,0.35);z-index:15;background:var(--bg-glass);backdrop-filter:blur(12px);padding:6px 16px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:85%;font-weight:500;letter-spacing:.2px}
+.btn{padding:14px 32px;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s cubic-bezier(.25,.46,.45,.94);letter-spacing:.3px}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,var(--primary),#8b7cf7);color:#fff;box-shadow:0 4px 20px rgba(108,92,231,0.35)}
+.btn-secondary{background:var(--bg-glass);color:var(--text-secondary);border:1px solid rgba(255,255,255,0.08)}
+.btn-secondary:active{background:var(--bg-glass-hover)}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:100;align-items:flex-end;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:var(--bg-modal);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:32px 28px calc(28px + env(safe-area-inset-bottom,0px));width:100%;max-width:500px;animation:slideUp .3s cubic-bezier(.22,1,.36,1);border-top:1px solid rgba(255,255,255,0.06)}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:36px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 24px}
+.modal-title{font-size:22px;font-weight:700;margin-bottom:6px;color:var(--text)}
+.modal-text{font-size:14px;color:var(--text-secondary);margin-bottom:24px;line-height:1.5}
+.modal-input{width:100%;padding:16px 18px;background:var(--bg-primary);border:1px solid rgba(255,255,255,0.08);border-radius:12px;font-size:16px;color:var(--text);outline:none;margin-bottom:24px;transition:border-color .2s}
+.modal-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(108,92,231,0.15)}
+.modal-input::placeholder{color:var(--text-tertiary)}
+.modal-buttons{display:flex;gap:12px}.modal-buttons .btn{flex:1;text-align:center}
+.loading-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg-primary);z-index:200;align-items:center;justify-content:center;flex-direction:column}
+.loading-overlay.active{display:flex}
+.spinner{width:44px;height:44px;border:3px solid rgba(108,92,231,0.15);border-top-color:var(--primary);border-radius:50%;animation:spin .8s cubic-bezier(.4,0,.2,1) infinite;margin-bottom:20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loadingText{color:var(--text-secondary);font-size:16px;font-weight:500}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--text-tertiary);border-radius:2px}
+.toast{position:fixed;bottom:calc(100px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg-card);color:var(--text);padding:12px 24px;border-radius:12px;font-size:14px;box-shadow:var(--shadow-md);border:1px solid rgba(255,255,255,0.06);opacity:0;transition:all .3s cubic-bezier(.22,1,.36,1);z-index:150;backdrop-filter:blur(12px);pointer-events:none;white-space:nowrap}
+.toast.active{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(min-width:768px){.session-list{padding-left:24px;padding-right:24px;max-width:600px;margin:0 auto}.modal{border-radius:var(--radius-lg);margin-bottom:40px;max-width:420px}.modal-overlay{align-items:center}}
+</style>
 </head>
 <body>
-  <!-- ===== Session List Screen ===== -->
-  <div id="sessionListScreen" class="screen active">
-    <div class="screen-header">
-      <h1 class="app-title">AcordesApp</h1>
-      <p class="app-subtitle">Visor inteligente de documentos</p>
+<div id="sessionListScreen" class="screen active">
+  <div class="screen-header"><h1 class="app-title">AcordesApp</h1><p class="app-subtitle">Visor inteligente de documentos</p></div>
+  <div id="emptyState" class="empty-state">
+    <div class="empty-icon-wrapper">📂</div>
+    <h2 class="empty-title">No hay sesiones</h2>
+    <p class="empty-text">Crea una sesión para organizar tus PDFs, imágenes y documentos Word</p>
+    <button class="btn btn-primary" onclick="showCreateModal()">+ Nueva Sesión</button>
+  </div>
+  <div id="sessionList" class="session-list"></div>
+  <div class="fab-container"><button class="fab" onclick="showCreateModal()" id="fabAdd">+</button></div>
+</div>
+
+<div id="sessionViewerScreen" class="screen">
+  <div class="viewer-header">
+    <button class="btn-back" onclick="goBackToSessions()" id="btnBack">‹</button>
+    <div class="viewer-header-center">
+      <span id="viewerSessionName" class="viewer-session-name"></span>
+      <span id="viewerFileName" class="viewer-file-name">Selecciona un archivo</span>
     </div>
+    <button class="btn-add-file" onclick="pickFiles()">+</button>
+  </div>
+  <div class="progress-bar" id="progressBar"></div>
+  <div class="pager-container" id="pagerContainer"><div class="pager" id="pager"></div></div>
+  <div class="empty-viewer" id="emptyViewer">
+    <div class="empty-viewer-icon">📄</div>
+    <p class="empty-viewer-text">Aún no hay archivos en esta sesión</p>
+    <button class="btn btn-primary" onclick="pickFiles()">Agregar Archivos</button>
+  </div>
+  <button class="nav-arrow nav-left" id="navLeft" onclick="navigatePage(-1)">‹</button>
+  <button class="nav-arrow nav-right" id="navRight" onclick="navigatePage(1)">›</button>
+  <div class="page-indicator" id="pageIndicator"></div>
+</div>
 
-    <!-- Empty State -->
-    <div id="emptyState" class="empty-state">
-      <div class="empty-icon-wrapper">📂</div>
-      <h2 class="empty-title">No hay sesiones</h2>
-      <p class="empty-text">Crea una sesión para organizar tus PDFs, imágenes y documentos Word</p>
-      <button class="btn btn-primary" onclick="showCreateModal()">+ Nueva Sesión</button>
-    </div>
-
-    <!-- Session List -->
-    <div id="sessionList" class="session-list"></div>
-
-    <!-- FAB -->
-    <div class="fab-container">
-      <button class="fab" onclick="showCreateModal()" id="fabAdd" aria-label="Nueva sesión">+</button>
+<div class="modal-overlay" id="createModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title">Nueva Sesión</h2>
+    <p class="modal-text">Ingresa un nombre para organizar tus documentos</p>
+    <input type="text" class="modal-input" id="sessionNameInput" placeholder="Ej: Proyecto, Viaje, Recetas..." maxlength="50" autofocus>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="hideCreateModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="handleCreateSession()">Crear</button>
     </div>
   </div>
+</div>
 
-  <!-- ===== Session Viewer Screen ===== -->
-  <div id="sessionViewerScreen" class="screen">
-    <!-- Header -->
-    <div class="viewer-header">
-      <button class="btn-back" onclick="goBackToSessions()" id="btnBack" aria-label="Volver">‹</button>
-      <div class="viewer-header-center">
-        <span id="viewerSessionName" class="viewer-session-name"></span>
-        <span id="viewerFileName" class="viewer-file-name">Selecciona un archivo</span>
-      </div>
-      <button class="btn-add-file" onclick="pickFiles()" aria-label="Agregar archivo">+</button>
-    </div>
+<input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.webp,.docx,.doc" style="display:none">
 
-    <!-- Progress Bar -->
-    <div class="progress-bar" id="progressBar"></div>
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <p id="loadingText">Procesando archivos...</p>
+</div>
 
-    <!-- Pager -->
-    <div class="pager-container" id="pagerContainer">
-      <div class="pager" id="pager"></div>
-    </div>
+<div class="toast" id="toast"></div>
 
-    <!-- Empty Viewer -->
-    <div class="empty-viewer" id="emptyViewer">
-      <div class="empty-viewer-icon">📄</div>
-      <p class="empty-viewer-text">Aún no hay archivos en esta sesión</p>
-      <button class="btn btn-primary" onclick="pickFiles()">Agregar Archivos</button>
-    </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.0/mammoth.browser.min.js"></script>
+<script>
+// sessionManager.js embedded
+window.App = window.App || {};
+let sessions = [];
+let sessionCounter = 0;
+const fileDataStore = {};
+function loadSessions(){try{const raw=localStorage.getItem('acordesapp_sessions');sessions=raw?JSON.parse(raw):[];if(!Array.isArray(sessions))sessions=[];sessions.forEach(s=>{const num=parseInt((s.id||'').replace('session_',''),10);if(num>sessionCounter)sessionCounter=num})}catch(e){console.warn('Error loading sessions:',e);sessions=[]}}
+function saveSessions(){try{localStorage.setItem('acordesapp_sessions',JSON.stringify(sessions))}catch(e){console.error('Error saving sessions:',e)}}
+function getFileStore(sessionId){if(!fileDataStore[sessionId])fileDataStore[sessionId]=[];return fileDataStore[sessionId]}
+window.App.getSessions=function(){return[...sessions]};
+window.App.createSession=function(name){const now=new Date().toISOString();const session={id:`session_${++sessionCounter}`,name:name.trim()||`Sesi\u00f3n ${sessionCounter}`,createdAt:now,updatedAt:now,fileCount:0,pageCount:0};sessions.push(session);fileDataStore[session.id]=[];saveSessions();return session};
+window.App.deleteSession=function(sessionId){sessions=sessions.filter(s=>s.id!==sessionId);delete fileDataStore[sessionId];saveSessions()};
+window.App.getSession=function(sessionId){return sessions.find(s=>s.id===sessionId)||null};
+window.App.getSessionFiles=function(sessionId){return[...getFileStore(sessionId)]};
+window.App.setSessionFiles=function(sessionId,files){const session=window.App.getSession(sessionId);if(!session)return;fileDataStore[sessionId]=files;session.fileCount=files.length;session.updatedAt=new Date().toISOString();saveSessions()};
+window.App.updateSessionPages=function(sessionId,pageCount){const session=window.App.getSession(sessionId);if(!session)return;session.pageCount=pageCount;saveSessions()};
+loadSessions();
+</script>
+<script>
+// fileProcessor.js embedded
+let fileCounter=0;
+function getFileType(file){const name=file.name.toLowerCase();const type=file.type||'';if(type.includes('pdf')||name.endsWith('.pdf'))return'pdf';if(type.includes('image')||/\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(name))return'image';if(type.includes('word')||type.includes('officedocument')||name.endsWith('.docx')||name.endsWith('.doc'))return'docx';return'unknown'}
+async function processFiles(files){const allPages=[];for(const file of files){const pages=await processFile(file);allPages.push(...pages)}return allPages}
+async function processFile(file){const fileId=`file_${++fileCounter}`;const type=getFileType(file);switch(type){case'pdf':return processPDF(file,fileId);case'image':return processImage(file,fileId);case'docx':return processDocx(file,fileId);default:return[]}}
+async function processPDF(file,fileId){try{const arrayBuffer=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;const totalPages=pdf.numPages;const pages=[];for(let i=1;i<=totalPages;i++){pages.push({id:`${fileId}_page_${i}`,fileId,fileName:file.name,fileType:'pdf',pageNumber:i,totalPages,pdfDoc:pdf})}return pages}catch(e){console.error('Error processing PDF:',e);return[]}}
+async function renderPDFPage(pdf,container,pageNumber){try{const page=await pdf.getPage(pageNumber);const viewport=page.getViewport({scale:1.5});const dpr=window.devicePixelRatio||1;const canvas=document.createElement('canvas');canvas.width=viewport.width*dpr;canvas.height=viewport.height*dpr;canvas.style.width=viewport.width+'px';canvas.style.height=viewport.height+'px';const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);container.innerHTML='';container.appendChild(canvas);await page.render({canvasContext:ctx,viewport}).promise}catch(e){container.innerHTML='<div style="padding:30px;color:#e74c3c;">Error al cargar esta p\u00e1gina</div>'}}
+async function processImage(file,fileId){const url=URL.createObjectURL(file);return[{id:`${fileId}_page_1`,fileId,fileName:file.name,fileType:'image',pageNumber:1,totalPages:1,url}]}
+async function processDocx(file,fileId){try{const arrayBuffer=await file.arrayBuffer();const result=await mammoth.convertToHtml({arrayBuffer});const html=result.value;const chunks=splitDocxIntoPages(html);return chunks.map((chunk,index)=>({id:`${fileId}_page_${index+1}`,fileId,fileName:file.name,fileType:'docx',pageNumber:index+1,totalPages:chunks.length,content:chunk}))}catch(e){console.error('Error processing DOCX:',e);return[{id:`${fileId}_page_1`,fileId,fileName:file.name,fileType:'docx',pageNumber:1,totalPages:1,content:'<p>Error al procesar el documento Word.</p>'}]}}
+function splitDocxIntoPages(html){const hasHr=/<hr\b[^>]*>/i.test(html);if(hasHr)return html.split(/<hr\b[^>]*>/i).filter(p=>p.trim().length>0);const blockMatch=html.match(/<(p|h[1-6]|div|table|ul|ol|blockquote)[^>]*>[\s\S]*?<\/\1>/gi);if(!blockMatch||blockMatch.length===0)return[html];const perPage=Math.max(2,Math.min(5,Math.ceil(blockMatch.length/3)));const pages=[];for(let i=0;i<blockMatch.length;i+=perPage){pages.push(blockMatch.slice(i,i+perPage).join('\n'))}return pages.length>0?pages:[html]}
+</script>
+<script>
+// pageRenderer.js embedded
+function createPageElement(page){const div=document.createElement('div');div.className='page';div.dataset.pageId=page.id;switch(page.fileType){case'image':renderImagePage(div,page);break;case'pdf':renderPDFPageWrapper(div,page);break;case'docx':renderDocxPage(div,page);break;default:div.innerHTML='<div style="color:#999;padding:20px;">Tipo no soportado</div>'}return div}
+function renderImagePage(container,page){const img=document.createElement('img');img.className='page-image';img.src=page.url;img.alt=page.fileName;img.draggable=false;container.appendChild(img)}
+function renderPDFPageWrapper(container,page){const wrapper=document.createElement('div');wrapper.className='page-pdf-container';wrapper.id=`pdf-container-${page.id}`;container.appendChild(wrapper);page._container=wrapper;page._rendered=false;wrapper.innerHTML='<div style="padding:30px;color:#666;">Cargando p\u00e1gina...</div>'}
+function renderDocxPage(container,page){const div=document.createElement('div');div.className='page-docx';div.innerHTML=page.content;container.appendChild(div)}
+function renderPDFOnDemand(page){if(page._rendered||!page._container)return;page._rendered=true;if(page.pdfDoc){renderPDFPage(page.pdfDoc,page._container,page.pageNumber)}}
+</script>
+<script>
+// main.js embedded
+let currentSessionId=null,currentPages=[],currentIndex=0,isDragging=false,dragStartX=0,dragOffset=0;
+document.addEventListener('DOMContentLoaded',()=>{
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+document.getElementById('sessionNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')handleCreateSession()});
+document.getElementById('fileInput').addEventListener('change',handleFileSelected);
+const pager=document.getElementById('pager');
+pager.addEventListener('touchstart',handleDragStart,{passive:true});
+pager.addEventListener('touchmove',handleDragMove,{passive:false});
+pager.addEventListener('touchend',handleDragEnd,{passive:true});
+pager.addEventListener('mousedown',handleMouseDragStart);
+document.addEventListener('mousemove',handleMouseDragMove);
+document.addEventListener('mouseup',handleMouseDragEnd);
+renderSessionList()});
 
-    <!-- Navigation Arrows -->
-    <button class="nav-arrow nav-left" id="navLeft" onclick="navigatePage(-1)" aria-label="Anterior">‹</button>
-    <button class="nav-arrow nav-right" id="navRight" onclick="navigatePage(1)" aria-label="Siguiente">›</button>
+function renderSessionList(){const sessions=window.App.getSessions();const list=document.getElementById('sessionList');const empty=document.getElementById('emptyState');if(sessions.length===0){list.innerHTML='';empty.style.display='flex';return}
+empty.style.display='none';const colors=['#6c5ce7','#e17055','#00b894','#fdcb6e','#a29bfe','#fd79a8'];
+list.innerHTML=sessions.map((s,i)=>`
+<div class="session-card" onclick="openSession('${s.id}')" data-sid="${s.id}">
+<div class="session-card-icon" style="background:${colors[i%colors.length]}20;">📁</div>
+<div class="session-card-info"><div class="session-card-name">${escapeHtml(s.name)}</div>
+<div class="session-card-meta">${s.fileCount>0?`${s.fileCount} archivo${s.fileCount!==1?'s':''} &middot; ${s.pageCount} p\u00e1gina${s.pageCount!==1?'s':''}`:'Sin archivos'}</div>
+<div class="session-card-date">${new Date(s.createdAt).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}</div></div>
+<div class="session-card-arrow">&#8250;</div></div>`).join('')}
 
-    <!-- Page Indicator -->
-    <div class="page-indicator" id="pageIndicator"></div>
-  </div>
+function showCreateModal(){document.getElementById('createModal').classList.add('active');document.getElementById('sessionNameInput').value='';setTimeout(()=>document.getElementById('sessionNameInput').focus(),100)}
+function hideCreateModal(){document.getElementById('createModal').classList.remove('active')}
+function handleCreateSession(){const input=document.getElementById('sessionNameInput');const name=input.value.trim();if(!name){input.style.borderColor='#e17055';setTimeout(()=>input.style.borderColor='',1000);return}
+window.App.createSession(name);hideCreateModal();renderSessionList()}
+function deleteSessionConfirm(sessionId){const session=window.App.getSession(sessionId);if(!session)return;if(confirm(`\u00bfEliminar "${session.name}"? Los archivos de esta sesi\u00f3n se perder\u00e1n.`)){window.App.deleteSession(sessionId);renderSessionList()}}
 
-  <!-- ===== Create Session Modal ===== -->
-  <div class="modal-overlay" id="createModal">
-    <div class="modal">
-      <div class="modal-handle"></div>
-      <h2 class="modal-title">Nueva Sesión</h2>
-      <p class="modal-text">Ingresa un nombre para organizar tus documentos</p>
-      <input
-        type="text"
-        class="modal-input"
-        id="sessionNameInput"
-        placeholder="Ej: Proyecto, Viaje, Recetas..."
-        maxlength="50"
-        autofocus
-        enterkeyhint="done"
-      >
-      <div class="modal-buttons">
-        <button class="btn btn-secondary" onclick="hideCreateModal()">Cancelar</button>
-        <button class="btn btn-primary" id="btnCreateSession" onclick="handleCreateSession()">Crear</button>
-      </div>
-    </div>
-  </div>
+function openSession(sessionId){currentSessionId=sessionId;currentIndex=0;currentPages=[];const session=window.App.getSession(sessionId);if(!session)return
+document.getElementById('sessionListScreen').classList.remove('active');document.getElementById('sessionViewerScreen').classList.add('active');document.getElementById('viewerSessionName').textContent=session.name;const files=window.App.getSessionFiles(sessionId);if(files&&files.length>0){processAndShowFiles(sessionId,files)}else{showEmptyViewer()}}
+function goBackToSessions(){currentSessionId=null;currentPages=[];currentIndex=0;currentPages.forEach(p=>{if(p.url)URL.revokeObjectURL(p.url)});document.getElementById('sessionViewerScreen').classList.remove('active');document.getElementById('sessionListScreen').classList.add('active');renderSessionList()}
+function showEmptyViewer(){document.getElementById('emptyViewer').classList.add('active');document.getElementById('pager').innerHTML='';document.getElementById('progressBar').innerHTML='';document.getElementById('pageIndicator').textContent='';document.getElementById('navLeft').classList.remove('active');document.getElementById('navRight').classList.remove('active');document.getElementById('viewerFileName').textContent='Sin archivos'}
+function pickFiles(){document.getElementById('fileInput').click()}
+async function handleFileSelected(e){const files=e.target.files;if(!files||files.length===0)return;e.target.value='';await processAndShowFiles(currentSessionId,Array.from(files))}
+async function processAndShowFiles(sessionId,files){showLoading('Procesando archivos...');try{const newPages=await processFiles(files);currentPages=currentPages.concat(newPages);const existing=window.App.getSessionFiles(sessionId);window.App.setSessionFiles(sessionId,existing.concat(files));window.App.updateSessionPages(sessionId,currentPages.length);currentIndex=0;renderPager();showToast(`\u2713 ${newPages.length} p\u00e1gina${newPages.length!==1?'s':''} agregada${newPages.length!==1?'s':''}`)}catch(e){console.error('Error processing files:',e);showToast('Error al procesar archivos')}finally{hideLoading()}}
+function renderPager(){document.getElementById('emptyViewer').classList.remove('active');if(currentPages.length===0){showEmptyViewer();return}
+const pager=document.getElementById('pager');pager.innerHTML='';currentPages.forEach(page=>{pager.appendChild(createPageElement(page))});updatePagerPosition();updateProgressBar();updateNavigation();updateFileInfo();renderVisiblePDFs()}
+function updatePagerPosition(){document.getElementById('pager').style.transform=`translateX(${-currentIndex*100}%)`}
+function updateProgressBar(){const bar=document.getElementById('progressBar');bar.innerHTML=currentPages.map((_,i)=>{let cls='progress-dot';if(i===currentIndex)cls+=' active';else if(i<currentIndex)cls+=' seen';return`<div class="${cls}"></div>`}).join('')}
+function updateNavigation(){document.getElementById('navLeft').classList.toggle('active',currentIndex>0);document.getElementById('navRight').classList.toggle('active',currentIndex<currentPages.length-1);const page=currentPages[currentIndex];if(page){document.getElementById('pageIndicator').textContent=`${page.fileName} &middot; P\u00e1g ${page.pageNumber} de ${page.totalPages} &middot; ${currentIndex+1} de ${currentPages.length}`}}
+function updateFileInfo(){const page=currentPages[currentIndex];if(page)document.getElementById('viewerFileName').textContent=page.fileName}
+function navigatePage(d){const n=currentIndex+d;if(n<0||n>=currentPages.length)return;currentIndex=n;updatePagerPosition();updateProgressBar();updateNavigation();updateFileInfo();renderVisiblePDFs()}
+function renderVisiblePDFs(){const indices=[currentIndex];if(currentIndex>0)indices.push(currentIndex-1);if(currentIndex<currentPages.length-1)indices.push(currentIndex+1);indices.forEach(i=>{const page=currentPages[i];if(page&&page.fileType==='pdf')renderPDFOnDemand(page)})}
+function handleDragStart(e){isDragging=true;dragStartX=e.touches[0].clientX;dragOffset=0;document.getElementById('pager').classList.add('dragging')}
+function handleDragMove(e){if(!isDragging)return;e.preventDefault();const cx=e.touches[0].clientX;dragOffset=cx-dragStartX;const p=document.getElementById('pager');p.style.transform=`translateX(${-currentIndex*100+(dragOffset/window.innerWidth)*100}%)`}
+function handleDragEnd(){if(!isDragging)return;isDragging=false;document.getElementById('pager').classList.remove('dragging');const th=window.innerWidth*0.2;if(dragOffset<-th&&currentIndex<currentPages.length-1)currentIndex++;else if(dragOffset>th&&currentIndex>0)currentIndex--;updatePagerPosition();updateProgressBar();updateNavigation();updateFileInfo();renderVisiblePDFs();dragOffset=0}
+function handleMouseDragStart(e){if(e.button!==0)return;isDragging=true;dragStartX=e.clientX;dragOffset=0;document.getElementById('pager').classList.add('dragging')}
+function handleMouseDragMove(e){if(!isDragging)return;const cx=e.clientX;dragOffset=cx-dragStartX;const p=document.getElementById('pager');p.style.transform=`translateX(${-currentIndex*100+(dragOffset/window.innerWidth)*100}%)`}
+function handleMouseDragEnd(){if(!isDragging)return;handleDragEnd()}
+function showLoading(t){document.getElementById('loadingText').textContent=t||'Procesando...';document.getElementById('loadingOverlay').classList.add('active')}
+function hideLoading(){document.getElementById('loadingOverlay').classList.remove('active')}
+function showToast(msg,dur=2500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('active');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('active'),dur)}
+function escapeHtml(str){const d=document.createElement('div');d.textContent=str;return d.innerHTML}
+if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{})})}
+window.addEventListener('popstate',()=>{if(currentSessionId)goBackToSessions()});
+// Long-press for iOS: prevent click from opening session after delete
+document.addEventListener('touchstart',e=>{const card=e.target.closest('.session-card');if(!card)return;const sid=card.dataset.sid;if(!sid)return;window._lpFired=false;window._lpTimer=setTimeout(()=>{window._lpFired=true;deleteSessionConfirm(sid)},600)},{passive:true});
+document.addEventListener('touchend',()=>{clearTimeout(window._lpTimer)},{passive:true});
+document.addEventListener('touchmove',()=>{clearTimeout(window._lpTimer)},{passive:true});
 
-  <!-- ===== Hidden File Input ===== -->
-  <input
-    type="file"
-    id="fileInput"
-    multiple
-    accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.webp,.docx,.doc"
-    style="display:none"
-  >
-
-  <!-- ===== Loading Overlay ===== -->
-  <div class="loading-overlay" id="loadingOverlay">
-    <div class="spinner"></div>
-    <p id="loadingText">Procesando archivos...</p>
-  </div>
-
-  <!-- ===== Toast ===== -->
-  <div class="toast" id="toast"></div>
-
-  <!-- ===== Scripts ===== -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.0/mammoth.browser.min.js"></script>
-  <script src="sessionManager.js"></script>
-  <script src="fileProcessor.js"></script>
-  <script src="pageRenderer.js"></script>
-  <script src="main.js"></script>
+// Patch openSession to block click when long-press fired
+const _origOpenSession=window.openSession;
+window.openSession=function(sid){if(window._lpFired){window._lpFired=false;return}_origOpenSession(sid)};
+</script>
 </body>
 </html>
