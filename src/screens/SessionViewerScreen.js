@@ -74,6 +74,12 @@ export default function SessionViewerScreen({ session, onGoBack, onSessionUpdate
 
       // Save files to session and get permanent URIs
       const updatedSession = await addFilesToSession(session.id, selectedFiles);
+      if (!updatedSession) {
+        console.error('Session not found:', session.id);
+        Alert.alert('Error', 'No se encontró la sesión. Intenta crear una nueva.');
+        setLoading(false);
+        return;
+      }
 
       // Process the permanent copies instead of temp URIs for consistency
       const lastFiles = updatedSession.files.slice(-selectedFiles.length);
@@ -82,11 +88,9 @@ export default function SessionViewerScreen({ session, onGoBack, onSessionUpdate
       setPages((prev) => [...prev, ...newPages]);
 
       // Update session page count
-      if (updatedSession) {
-        updatedSession.pageCount = pages.length + newPages.length;
-        setSessionData(updatedSession);
-        if (onSessionUpdated) onSessionUpdated(updatedSession);
-      }
+      updatedSession.pageCount = pages.length + newPages.length;
+      setSessionData(updatedSession);
+      if (onSessionUpdated) onSessionUpdated(updatedSession);
     } catch (error) {
       console.error('Error picking files:', error);
       Alert.alert('Error', 'Ocurrió un error al seleccionar los archivos.');

@@ -20,9 +20,10 @@ async function ensureFilesDir() {
  * Copy a file to permanent storage and return the new URI.
  */
 export async function copyFileToPermanentStorage(uri, fileName) {
-  await ensureFilesDir();
-  const dest = `${FILES_DIR}${Date.now()}_${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
   try {
+    await ensureFilesDir();
+    const safeName = (fileName || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const dest = `${FILES_DIR}${Date.now()}_${safeName}`;
     await FileSystem.copyAsync({ from: uri, to: dest });
     return dest;
   } catch (e) {

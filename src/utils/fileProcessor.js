@@ -37,19 +37,24 @@ export function clearPDFCache() {
 }
 
 async function processFile(file) {
-  const fileId = `file_${++fileCounter}`;
-  const fileName = file.name || file.uri.split('/').pop() || 'unknown';
-  const type = getFileType(fileName, file.mimeType);
+  try {
+    const fileId = `file_${++fileCounter}`;
+    const fileName = file?.name || (file?.uri ? file.uri.split('/').pop() : '') || 'unknown';
+    const type = getFileType(fileName, file?.mimeType);
 
-  switch (type) {
-    case 'pdf':
-      return processPDF(file, fileId, fileName);
-    case 'image':
-      return processImage(file, fileId, fileName);
-    case 'docx':
-      return processDocx(file, fileId, fileName);
-    default:
-      return [];
+    switch (type) {
+      case 'pdf':
+        return processPDF(file, fileId, fileName);
+      case 'image':
+        return processImage(file, fileId, fileName);
+      case 'docx':
+        return processDocx(file, fileId, fileName);
+      default:
+        return [];
+    }
+  } catch (e) {
+    console.error('processFile unexpected error:', e);
+    return [];
   }
 }
 
