@@ -2,22 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system';
-import { createPDFViewerHTML, getPDFBase64 } from '../utils/fileProcessor';
+import { createPDFViewerHTML, getPDFBase64, getPDFJSLocalPath } from '../utils/fileProcessor';
 
 
 export default function PDFPage({ fileId, pageNumber }) {
   const [htmlUri, setHtmlUri] = useState(null);
   const [error, setError] = useState(null);
+  const [pdfjsReady, setPdfjsReady] = useState(false);
   const base64 = getPDFBase64(fileId);
 
+  // Download PDF.js locally on mount
   useEffect(() => {
+    (async () => {
+      const path = await getPDFJSLocalPath();
+      // path will be null if download failed — we fall back to CDN
+      setPdfjsReady(true);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!pdfjsReady) return;
     if (!base64) {
       setError('No se pudieron cargar los datos del PDF');
       return;
     }
     (async () => {
       try {
-        const html = createPDFViewerHTML(base64, pageNumber);
+        const localScriptPath = await getPDFJSLocalPath();
+        const html = createPDFViewerHTML(base64, pageNumber, localScriptPath);
         const path = `${FileSystem.cacheDirectory}pdf_${fileId}_p${pageNumber}.html`;
         await FileSystem.writeAsStringAsync(path, html);
         setHtmlUri(path);
@@ -26,7 +38,7 @@ export default function PDFPage({ fileId, pageNumber }) {
         setError('Error al preparar la página');
       }
     })();
-  }, [fileId, pageNumber, base64]);
+  }, [pdfjsReady, fileId, pageNumber, base64]);
 
   if (error) {
     return (

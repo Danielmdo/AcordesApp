@@ -261,17 +261,53 @@ function splitDocxIntoPages(html) {
   return pages.length > 0 ? pages : [html];
 }
 
+let pdfJSLocalPath = null;
+const PDFJS_CACHE_FILE = `${FileSystem.cacheDirectory}pdfjs/pdf.min.js`;
+
+/**
+ * Get the local file path for PDF.js.
+ * Downloads and caches PDF.js on first use.
+ */
+export async function getPDFJSLocalPath() {
+  if (pdfJSLocalPath) return pdfJSLocalPath;
+  try {
+    const info = await FileSystem.getInfoAsync(PDFJS_CACHE_FILE);
+    if (info.exists) {
+      pdfJSLocalPath = PDFJS_CACHE_FILE;
+      return pdfJSLocalPath;
+    }
+    // Download PDF.js to local cache
+    const dir = PDFJS_CACHE_FILE.substring(0, PDFJS_CACHE_FILE.lastIndexOf('/'));
+    await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+    const result = await FileSystem.downloadAsync(
+      'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+      PDFJS_CACHE_FILE
+    );
+    pdfJSLocalPath = result.uri;
+    return pdfJSLocalPath;
+  } catch (e) {
+    console.warn('Could not download PDF.js locally, will try CDN fallback:', e.message);
+    return null;
+  }
+}
+
 /**
  * Create PDF.js HTML for rendering a specific PDF page.
  * Uses canvas to render the PDF page at high quality.
+ * @param {string} base64 - Base64-encoded PDF data
+ * @param {number} pageNumber - Page number to render (1-indexed)
+ * @param {string|null} localScriptPath - Local file:// path to pdf.min.js, or null to use CDN
  */
-export function createPDFViewerHTML(base64, pageNumber) {
+export function createPDFViewerHTML(base64, pageNumber, localScriptPath) {
+  const scriptTag = localScriptPath
+    ? `<script src="${localScriptPath}"></script>`
+    : '<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>';
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  ${scriptTag}
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { 
