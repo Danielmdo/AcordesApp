@@ -14,8 +14,7 @@ export default function PDFPage({ fileId, pageNumber }) {
   // Download PDF.js locally on mount
   useEffect(() => {
     (async () => {
-      const path = await getPDFJSLocalPath();
-      // path will be null if download failed — we fall back to CDN
+      await getPDFJSLocalPath();
       setPdfjsReady(true);
     })();
   }, []);
