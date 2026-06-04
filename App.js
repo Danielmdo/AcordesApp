@@ -1,11 +1,41 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, StyleSheet } from 'react-native';
+import SessionListScreen from './src/screens/SessionListScreen';
+import SessionViewerScreen from './src/screens/SessionViewerScreen';
+import { clearPDFCache } from './src/utils/fileProcessor';
 
 export default function App() {
+  const [currentSession, setCurrentSession] = useState(null);
+
+  const handleOpenSession = useCallback((session) => {
+    setCurrentSession(session);
+  }, []);
+
+  const handleGoBack = useCallback(() => {
+    // Clear cached PDF data to free memory when leaving a session
+    clearPDFCache();
+    setCurrentSession(null);
+  }, []);
+
+  const handleSessionUpdated = useCallback((updatedSession) => {
+    setCurrentSession(updatedSession);
+  }, []);
+
+  if (currentSession) {
+    return (
+      <View style={styles.container}>
+        <SessionViewerScreen
+          session={currentSession}
+          onGoBack={handleGoBack}
+          onSessionUpdated={handleSessionUpdated}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
+      <SessionListScreen onOpenSession={handleOpenSession} />
     </View>
   );
 }
@@ -13,8 +43,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#1a1a2e',
   },
 });
