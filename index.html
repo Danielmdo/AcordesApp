@@ -102,6 +102,26 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 .toast{position:fixed;bottom:calc(100px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg-card);color:var(--text);padding:12px 24px;border-radius:12px;font-size:14px;box-shadow:var(--shadow-md);border:1px solid rgba(255,255,255,0.06);opacity:0;transition:all .3s cubic-bezier(.22,1,.36,1);z-index:150;backdrop-filter:blur(12px);pointer-events:none;white-space:nowrap}
 .toast.active{opacity:1;transform:translateX(-50%) translateY(0)}
 @media(min-width:768px){.session-list{padding-left:24px;padding-right:24px;max-width:600px;margin:0 auto}.modal{border-radius:var(--radius-lg);margin-bottom:40px;max-width:420px}.modal-overlay{align-items:center}}
+
+/* Install button */
+.btn-install{position:fixed;bottom:calc(100px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);padding:14px 28px;background:linear-gradient(135deg,var(--primary),#8b7cf7);color:#fff;border:none;border-radius:16px;font-size:15px;font-weight:600;cursor:pointer;z-index:40;box-shadow:0 6px 30px rgba(108,92,231,0.4);transition:all .3s cubic-bezier(.25,.46,.45,.94);display:none;align-items:center;gap:10px;letter-spacing:.2px;backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1)}
+.btn-install.show{display:flex}
+.btn-install:active{transform:translateX(-50%) scale(.95)}
+.btn-install-icon{font-size:20px}
+.install-modal-content{text-align:center;padding:4px 0 16px}
+.install-modal-icon{font-size:64px;margin-bottom:16px;display:block}
+.install-modal-title{font-size:22px;font-weight:700;margin-bottom:8px;color:var(--text)}
+.install-modal-desc{font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:24px}
+.install-step{display:flex;align-items:center;gap:16px;background:var(--bg-primary);border-radius:12px;padding:14px 16px;margin-bottom:12px;text-align:left;border:1px solid rgba(255,255,255,0.06)}
+.install-step-num{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.install-step-text{font-size:14px;color:var(--text);line-height:1.4}
+.install-step-text strong{color:var(--primary-light)}
+.install-step-icon{font-size:24px;flex-shrink:0}
+.install-note{font-size:12px;color:var(--text-tertiary);margin-top:16px;line-height:1.5}
+.standalone-banner{display:none;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(0,184,148,0.12),rgba(0,184,148,0.05));border:1px solid rgba(0,184,148,0.2);border-radius:12px;padding:12px 16px;margin:0 16px 8px;font-size:13px;color:var(--success);position:relative;z-index:2}
+.standalone-banner.show{display:flex}
+.standalone-banner-icon{font-size:18px;flex-shrink:0}
+@media all and (display-mode:standalone){.btn-install{display:none!important}}
 </style>
 </head>
 <body>
@@ -115,6 +135,10 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   </div>
   <div id="sessionList" class="session-list"></div>
   <div class="fab-container"><button class="fab" onclick="showCreateModal()" id="fabAdd">+</button></div>
+  <div class="standalone-banner" id="standaloneBanner"><span class="standalone-banner-icon">\u2714</span> App instalada correctamente</div>
+  <button class="btn-install" id="btnInstall" onclick="showInstallModal()">
+    <span class="btn-install-icon">\u2b50</span> Instalar App
+  </button>
 </div>
 
 <div id="sessionViewerScreen" class="screen">
@@ -159,6 +183,37 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Install modal -->
+<div class="modal-overlay" id="installModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="install-modal-content">
+      <span class="install-modal-icon">\ud83d\udcf2</span>
+      <h2 class="install-modal-title">Instalar AcordesApp</h2>
+      <p class="install-modal-desc">Agrega la app a la pantalla de inicio para usarla como una aplicaci\u00f3n nativa, sin necesidad de abrir Safari cada vez.</p>
+      <div class="install-step">
+        <span class="install-step-num">1</span>
+        <span class="install-step-text">Toca el bot\u00f3n <strong>Compartir</strong> en Safari</span>
+        <span class="install-step-icon">\ud83d\udd01</span>
+      </div>
+      <div class="install-step">
+        <span class="install-step-num">2</span>
+        <span class="install-step-text">Despl\u00e1zate y selecciona <strong>\"Agregar a la pantalla de inicio\"</strong></span>
+        <span class="install-step-icon">\u2b50</span>
+      </div>
+      <div class="install-step">
+        <span class="install-step-num">3</span>
+        <span class="install-step-text">Toca <strong>\"Agregar\"</strong> en la esquina superior derecha</span>
+        <span class="install-step-icon">\u2714\ufe0f</span>
+      </div>
+      <p class="install-note">\ud83d\udcf1 La app se abrir\u00e1 como una aplicaci\u00f3n independiente, con su propio icono en el Home Screen y sin la interfaz de Safari.</p>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="hideInstallModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.0/mammoth.browser.min.js"></script>
@@ -259,6 +314,58 @@ function showLoading(t){document.getElementById('loadingText').textContent=t||'P
 function hideLoading(){document.getElementById('loadingOverlay').classList.remove('active')}
 function showToast(msg,dur=2500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('active');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('active'),dur)}
 function escapeHtml(str){const d=document.createElement('div');d.textContent=str;return d.innerHTML}
+// PWA Install handling
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('btnInstall').classList.add('show');
+});
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  document.getElementById('btnInstall').classList.remove('show');
+  document.getElementById('standaloneBanner').classList.add('show');
+  setTimeout(() => document.getElementById('standaloneBanner').classList.remove('show'), 4000);
+});
+
+function showInstallModal() {
+  if (deferredPrompt) {
+    // Chrome/Android - trigger native install prompt
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((result) => {
+      if (result.outcome === 'accepted') {
+        console.log('User accepted install');
+      }
+      deferredPrompt = null;
+      document.getElementById('btnInstall').classList.remove('show');
+    });
+  } else {
+    // iOS or unsupported - show instructions modal
+    document.getElementById('installModal').classList.add('active');
+  }
+}
+
+function hideInstallModal() {
+  document.getElementById('installModal').classList.remove('active');
+}
+
+// Detect standalone mode and hide install button
+(function() {
+  if (window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true) {
+    document.getElementById('btnInstall').classList.remove('show');
+    document.getElementById('standaloneBanner').classList.add('show');
+    setTimeout(() => document.getElementById('standaloneBanner').classList.remove('show'), 3000);
+  } else if (!deferredPrompt) {
+    // No beforeinstallprompt (iOS) - show install button after a delay
+    setTimeout(() => {
+      if (!document.getElementById('btnInstall').classList.contains('show')) {
+        document.getElementById('btnInstall').classList.add('show');
+      }
+    }, 3000);
+  }
+})();
+
 if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{})})}
 window.addEventListener('popstate',()=>{if(currentSessionId)goBackToSessions()});
 // Long-press for iOS: prevent click from opening session after delete

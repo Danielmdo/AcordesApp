@@ -1,15 +1,10 @@
 // Service Worker for AcordesApp PWA
-const CACHE_NAME = 'acordesapp-v1';
+const CACHE_NAME = 'acordesapp-v2';
 
-// Files to cache on install
+// Files to cache on install (all inlined in index.html now)
 const PRECACHE_URLS = [
   './',
   './index.html',
-  './style.css',
-  './main.js',
-  './sessionManager.js',
-  './fileProcessor.js',
-  './pageRenderer.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -41,34 +36,41 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - network first, cache fallback
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
-  // For CDN resources, use cache-first
-  if (event.request.url.includes('cdnjs.cloudflare.com')) {
+  // For CDN resources (jsdelivr), use cache-first with network update
+  if (event.request.url.includes('cdn.jsdelivr.net')) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
-        return cached || fetch(event.request).then((response) => {
+        const fetchPromise = fetch(event.request).then((response) => {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           return response;
         });
+        return cached || fetchPromise;
       })
     );
     return;
   }
 
-  // For our own files, network first
+  // For our own files, network first with offline fallback to index.html
   event.respondWith(
     fetch(event.request)
       .then((response) => {
         const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        if (event.request.url.startsWith(self.location.origin)) {
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
         return response;
       })
       .catch(() => {
         return caches.match(event.request).then((cached) => {
-          return cached || new Response('Offline', { status: 503 });
+          if (cached) return cached;
+          // For navigation requests, serve index.html (SPA fallback)
+          if (event.request.mode === 'navigate') {
+            return caches.match('./index.html');
+          }
+          return new Response('Offline', { status: 503 });
         });
       })
   );
