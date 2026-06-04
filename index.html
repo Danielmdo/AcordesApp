@@ -255,19 +255,15 @@ async function getFileDB() {
 
 window.App.saveFilesToDB = async function(sessionId, fileList) {
   try {
-    const db = await getFileDB();
-    const tx = db.transaction('files', 'readwrite');
-    const store = tx.objectStore('files');
+    const entries = [];
     for (let i = 0; i < fileList.length; i++) {
       const f = fileList[i];
-      const ab = await f.arrayBuffer();
-      store.put({ id: `${sessionId}_idx_${i}`, fileName: f.name, fileType: f.type, data: ab });
+      entries.push({ fileName: f.name, fileType: f.type, data: await f.arrayBuffer() });
     }
-    await new Promise((resolve, reject) => {
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-    return true;
+    const db = await getFileDB();
+    const tx = db.transaction('files', 'readwrite');
+    tx.objectStore('files').put({ id: sessionId, files: entries });
+    return new Promise((resolve) => { tx.oncomplete = () => resolve(true); tx.onerror = () => resolve(false); });
   } catch(e) {
     console.warn('IndexedDB save failed:', e);
     return false;
@@ -277,18 +273,13 @@ window.App.saveFilesToDB = async function(sessionId, fileList) {
 window.App.loadFilesFromDB = async function(sessionId) {
   try {
     const db = await getFileDB();
-    const tx = db.transaction('files', 'readonly');
-    const store = tx.objectStore('files');
-    const range = IDBKeyRange.bound(sessionId + '_idx_', sessionId + '_idx_\\uffff');
-    const req = store.getAll(range);
-    const items = await new Promise((resolve, reject) => {
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = () => reject(req.error);
+    const entry = await new Promise((resolve) => {
+      const req = db.transaction('files', 'readonly').objectStore('files').get(sessionId);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
     });
-    return items.map(item => {
-      const blob = new Blob([item.data], { type: item.fileType || 'application/octet-stream' });
-      return new File([blob], item.fileName, { type: item.fileType || 'application/octet-stream' });
-    });
+    if (!entry || !entry.files || entry.files.length === 0) return [];
+    return entry.files.map(f => new File([f.data], f.fileName, { type: f.fileType || 'application/octet-stream' }));
   } catch(e) {
     console.warn('IndexedDB load failed:', e);
     return [];
@@ -298,17 +289,12 @@ window.App.loadFilesFromDB = async function(sessionId) {
 window.App.deleteSessionFilesFromDB = async function(sessionId) {
   try {
     const db = await getFileDB();
-    const tx = db.transaction('files', 'readwrite');
-    const store = tx.objectStore('files');
-    const range = IDBKeyRange.bound(sessionId + '_idx_', sessionId + '_idx_\\uffff');
-    store.delete(range);
-    await new Promise((resolve, reject) => {
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
+    await new Promise((resolve) => {
+      const req = db.transaction('files', 'readwrite').objectStore('files').delete(sessionId);
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
     });
-  } catch(e) {
-    console.warn('IndexedDB delete failed:', e);
-  }
+  } catch(e) { console.warn('IndexedDB delete failed:', e); }
 };
 </script>
 <script>
@@ -372,7 +358,7 @@ function goBackToSessions(){currentSessionId=null;currentPages=[];currentIndex=0
 function showEmptyViewer(){document.getElementById('emptyViewer').classList.add('active');document.getElementById('pager').innerHTML='';document.getElementById('progressBar').innerHTML='';document.getElementById('pageIndicator').textContent='';document.getElementById('navLeft').classList.remove('active');document.getElementById('navRight').classList.remove('active');document.getElementById('viewerFileName').textContent='Sin archivos'}
 function pickFiles(){document.getElementById('fileInput').click()}
 async function handleFileSelected(e){const fileArray=Array.from(e.target.files);if(!fileArray||fileArray.length===0)return;e.target.value='';await processAndShowFiles(currentSessionId,fileArray)}
-async function processAndShowFiles(sessionId,files){showLoading('Procesando archivos...');try{const newPages=await processFiles(files);currentPages=currentPages.concat(newPages);const existing=window.App.getSessionFiles(sessionId);window.App.setSessionFiles(sessionId,existing.concat(files));window.App.updateSessionPages(sessionId,currentPages.length);currentIndex=0;renderPager();showToast(`\u2713 ${newPages.length} p\u00e1gina${newPages.length!==1?'s':''} agregada${newPages.length!==1?'s':''}`);window.App.saveFilesToDB(sessionId,files)}catch(e){console.error('Error processing files:',e);showToast('Error al procesar archivos')}finally{hideLoading()}}
+async function processAndShowFiles(sessionId,files){showLoading('Procesando archivos...');try{const newPages=await processFiles(files);currentPages=currentPages.concat(newPages);const existing=window.App.getSessionFiles(sessionId);window.App.setSessionFiles(sessionId,existing.concat(files));window.App.updateSessionPages(sessionId,currentPages.length);currentIndex=0;renderPager();showToast(`\u2713 ${newPages.length} p\u00e1gina${newPages.length!==1?'s':''} agregada${newPages.length!==1?'s':''}`);window.App.saveFilesToDB(sessionId,window.App.getSessionFiles(sessionId))}catch(e){console.error('Error processing files:',e);showToast('Error al procesar archivos')}finally{hideLoading()}}
 function renderPager(){document.getElementById('emptyViewer').classList.remove('active');if(currentPages.length===0){showEmptyViewer();return}
 const pager=document.getElementById('pager');pager.innerHTML='';currentPages.forEach(page=>{pager.appendChild(createPageElement(page))});updatePagerPosition();updateProgressBar();updateNavigation();updateFileInfo();renderVisiblePDFs()}
 function updatePagerPosition(){document.getElementById('pager').style.transform=`translateX(${-currentIndex*100}%)`}
