@@ -28,6 +28,8 @@ export default function PDFPage({ fileId, pageNumber }) {
         bounces={false}
         javaScriptEnabled={true}
         domStorageEnabled={true}
+        allowFileAccess={true}
+        allowUniversalAccessFromFileURLs={true}
         originWhitelist={['*']}
         startInLoadingState={true}
         renderLoading={() => (
