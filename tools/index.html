@@ -10,45 +10,55 @@
 
 <div class="app-header">
   <a href="../index.html">&larr; Volver</a>
-  <h1>🎵 Editor Musical</h1>
+  <h1>Editor Musical</h1>
+  <div class="view-toggle">
+    <button id="tabEdit" class="active" onclick="switchView('edit')">Editar</button>
+    <button id="tabPreview" onclick="switchView('preview')">Vista</button>
+  </div>
 </div>
 
 <div class="container">
 
-  <!-- Upload -->
+  <!-- Upload + Controls -->
   <div>
     <div class="upload-area" id="dropZone">
       <div class="icon">📁</div>
-      <div class="label">Arrastra un archivo o haz clic</div>
+      <div class="label">Arrastra o haz clic</div>
       <div class="hint">PDF · Imagen · DOCX</div>
       <div class="file-info" id="fileInfo"></div>
     </div>
     <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.webp,.docx" style="display:none">
-  </div>
 
-  <!-- Controls + Editor -->
-  <div class="controls">
-
-    <div class="control-row">
+    <div class="control-row" style="margin-top:14px">
       <label>Raíz:</label>
       <select id="rootSelect"></select>
-      <button class="primary" id="btnConvert">Convertir Grados &rarr;</button>
+      <button class="primary" id="btnConvert">Grados &rarr; Notas</button>
     </div>
 
-    <div class="control-row">
-      <label>Transponer:</label>
+    <div class="control-row" style="margin-top:6px">
+      <label>Transp:</label>
       <div class="transpose-group" id="transposeGroup"></div>
     </div>
+  </div>
 
-    <div class="editor-container">
-      <div class="action-bar">
-        <div class="status" id="status">Carga un archivo para empezar</div>
-        <div class="spacer"></div>
-        <button id="btnExport" disabled>Exportar .txt</button>
-      </div>
-      <textarea id="editor" placeholder="El texto extraído aparecerá aquí. Puedes editarlo manualmente."></textarea>
+  <!-- Editor + Preview -->
+  <div class="editor-container">
+    <div class="action-bar">
+      <div class="status" id="status">Carga un archivo para empezar</div>
+      <div class="spacer"></div>
+      <button id="btnExport" disabled>Exportar .txt</button>
+      <button id="btnImportChordPro" title="Convertir texto plano a formato ChordPro">Importar</button>
     </div>
 
+    <!-- Edit panel -->
+    <div class="editor-panel active" id="editPanel">
+      <textarea id="editor" placeholder="Escribe en formato ChordPro: [Am]Let it [C]be..."></textarea>
+    </div>
+
+    <!-- Preview panel -->
+    <div class="preview-panel" id="previewPanel">
+      <div id="previewContent" class="preview-empty">Cambia a vista &quot;Editar&quot; para ver el contenido</div>
+    </div>
   </div>
 </div>
 
@@ -70,9 +80,12 @@
   const btnExport = document.getElementById('btnExport');
   const status = document.getElementById('status');
   const toast = document.getElementById('toast');
-
-  let currentText = '';
-  let currentFileType = null;
+  const tabEdit = document.getElementById('tabEdit');
+  const tabPreview = document.getElementById('tabPreview');
+  const editPanel = document.getElementById('editPanel');
+  const previewPanel = document.getElementById('previewPanel');
+  const previewContent = document.getElementById('previewContent');
+  const btnImportChordPro = document.getElementById('btnImportChordPro');
 
   // Populate root selector
   MusicEngine.getAvailableRoots().forEach(r => {
@@ -83,20 +96,38 @@
   });
   rootSelect.value = 'C';
 
-  // Transpose buttons: -12 to +12 semitones
+  // Transpose buttons: -12 to +12
   for (let i = -12; i <= 12; i++) {
     const btn = document.createElement('button');
     btn.textContent = i > 0 ? '+' + i : String(i);
     btn.dataset.semitones = i;
-    btn.title = (i === 0 ? 'Original' : (i > 0 ? 'Subir ' : 'Bajar ') + Math.abs(i) + ' semitonos');
+    btn.title = i === 0 ? 'Original' : (i > 0 ? 'Subir ' : 'Bajar ') + Math.abs(i) + ' semitonos';
     if (i === 0) btn.classList.add('active');
     btn.addEventListener('click', () => applyTranspose(i));
     transposeGroup.appendChild(btn);
   }
 
-  // Upload handlers
-  dropZone.addEventListener('click', () => fileInput.click());
+  // -- View switching --
+  window.switchView = function(view) {
+    tabEdit.classList.toggle('active', view === 'edit');
+    tabPreview.classList.toggle('active', view === 'preview');
+    editPanel.classList.toggle('active', view === 'edit');
+    previewPanel.classList.toggle('active', view === 'preview');
+    if (view === 'preview') renderPreview();
+  };
 
+  function renderPreview() {
+    const text = editor.value.trim();
+    if (!text) {
+      previewContent.innerHTML = '<div class="preview-empty">El editor está vacío</div>';
+      return;
+    }
+    const html = MusicEngine.renderPreview(text);
+    previewContent.innerHTML = html || '<div class="preview-empty">No hay acordes para mostrar</div>';
+  }
+
+  // -- Upload handlers --
+  dropZone.addEventListener('click', () => fileInput.click());
   dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
     dropZone.classList.add('dragover');
@@ -120,32 +151,32 @@
     status.className = 'status';
     btnConvert.disabled = true;
     btnExport.disabled = true;
-
     const ext = file.name.split('.').pop().toLowerCase();
     try {
+      let rawText = '';
       if (['jpg','jpeg','png','gif','bmp','webp'].includes(ext)) {
-        currentFileType = 'image';
-        await ocrImage(file);
+        rawText = await ocrImage(file);
       } else if (ext === 'pdf') {
-        currentFileType = 'pdf';
-        await extractPDFText(file);
+        rawText = await extractPDFText(file);
       } else if (ext === 'docx') {
-        currentFileType = 'docx';
-        await extractDocxText(file);
+        rawText = await extractDocxText(file);
       } else {
         setStatus('Formato no soportado: .' + ext, 'error');
         return;
       }
+      // Auto-import: detect ChordPro or convert plain text
+      const chordProText = MusicEngine.importText(rawText);
+      editor.value = chordProText;
       btnConvert.disabled = false;
       btnExport.disabled = false;
-      setStatus('Listo. ' + editor.value.split('\n').length + ' líneas extraídas.', 'success');
+      const lines = editor.value.split('\n').length;
+      setStatus('Listo. ' + lines + ' líneas importadas.', 'success');
     } catch (e) {
       console.error(e);
       setStatus('Error: ' + e.message, 'error');
     }
   }
 
-  // --- PDF text extraction ---
   async function extractPDFText(file) {
     const buf = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
@@ -168,22 +199,17 @@
       if (line) fullText += line + '\n';
       fullText += '\n';
     }
-    editor.value = fullText.trim();
-    currentText = editor.value;
+    return fullText.trim();
   }
 
-  // --- DOCX text extraction ---
   async function extractDocxText(file) {
     const buf = await file.arrayBuffer();
     const result = await mammoth.convertToHtml({ arrayBuffer: buf });
     const div = document.createElement('div');
     div.innerHTML = result.value;
-    const text = div.textContent || div.innerText || '';
-    editor.value = text.trim();
-    currentText = editor.value;
+    return (div.textContent || div.innerText || '').trim();
   }
 
-  // --- OCR Image ---
   async function ocrImage(file) {
     const imgUrl = URL.createObjectURL(file);
     try {
@@ -194,57 +220,68 @@
           }
         }
       });
-      editor.value = data.text.trim();
-      currentText = editor.value;
+      return data.text.trim();
     } finally {
       URL.revokeObjectURL(imgUrl);
     }
   }
 
-  // --- Convert degrees ---
+  // -- Convert degrees (only within [brackets]) --
   btnConvert.addEventListener('click', () => {
     const root = rootSelect.value;
     const before = editor.value;
     const after = MusicEngine.convertDegrees(before, root);
     if (before !== after) {
-      const count = countChanges(before, after);
+      const changes = countDiffs(before, after);
       editor.value = after;
-      currentText = after;
-      setStatus(count + ' grado' + (count !== 1 ? 's' : '') + ' convertido' + (count !== 1 ? 's' : '') + ' (raíz ' + root + ')', 'success');
+      setStatus(changes + ' acorde' + (changes !== 1 ? 's' : '') + ' convertido' + (changes !== 1 ? 's' : '') + ' (raíz ' + root + ')', 'success');
     } else {
       setStatus('No se detectaron grados para convertir', '');
     }
   });
 
-  function countChanges(before, after) {
-    const bLines = before.split('\n');
-    const aLines = after.split('\n');
-    let changes = 0;
-    for (let i = 0; i < Math.min(bLines.length, aLines.length); i++) {
-      if (bLines[i] !== aLines[i]) changes++;
+  function countDiffs(before, after) {
+    const b = before.split('\n');
+    const a = after.split('\n');
+    let n = 0;
+    for (let i = 0; i < Math.min(b.length, a.length); i++) {
+      if (b[i] !== a[i]) n++;
     }
-    return changes;
+    return n;
   }
 
-  // --- Transpose ---
-  let currentTranspose = 0;
-
+  // -- Transpose (only within [brackets]) --
   function applyTranspose(semitones) {
     const text = editor.value;
     if (!text.trim()) return;
 
-    currentTranspose = semitones;
-    const transposed = MusicEngine.transpose(currentText, semitones);
+    const transposed = MusicEngine.transpose(text, semitones);
     editor.value = transposed;
-
-    // Update active button
-    transposeGroup.querySelectorAll('button').forEach(b => b.classList.toggle('active', parseInt(b.dataset.semitones) === semitones));
-
+    transposeGroup.querySelectorAll('button').forEach(b =>
+      b.classList.toggle('active', parseInt(b.dataset.semitones) === semitones)
+    );
     const label = semitones === 0 ? 'Original' : (semitones > 0 ? '+' + semitones : String(semitones));
-    setStatus('Transpuesto ' + label + ' semitonos', '');
+    setStatus('Transpuesto ' + label + ' semitonos', 'success');
   }
 
-  // --- Export ---
+  // -- Import plain text as ChordPro --
+  btnImportChordPro.addEventListener('click', () => {
+    const text = editor.value;
+    if (!text.trim()) return;
+    if (MusicEngine.isChordPro(text)) {
+      setStatus('Ya está en formato ChordPro', '');
+      return;
+    }
+    const converted = MusicEngine.importText(text);
+    if (converted !== text) {
+      editor.value = converted;
+      setStatus('Convertido a ChordPro', 'success');
+    } else {
+      setStatus('No se pudo convertir (¿no hay acordes detectados?)', '');
+    }
+  });
+
+  // -- Export --
   btnExport.addEventListener('click', () => {
     const text = editor.value;
     if (!text.trim()) return;
@@ -258,12 +295,11 @@
     showToast('Exportado como letra_acordes.txt');
   });
 
-  // --- Utils ---
+  // -- Utils --
   function setStatus(msg, type) {
     status.textContent = msg;
     status.className = 'status' + (type ? ' ' + type : '');
   }
-
   function showToast(msg) {
     toast.textContent = msg;
     toast.classList.add('show');
@@ -271,12 +307,10 @@
     toast._timer = setTimeout(() => toast.classList.remove('show'), 2500);
   }
 
-  // Listen for manual edits to currentText
+  // Re-render preview on edit
   editor.addEventListener('input', () => {
-    currentText = editor.value;
+    if (previewPanel.classList.contains('active')) renderPreview();
   });
-
-  setStatus('Carga un archivo para empezar', '');
 })();
 </script>
 </body>
