@@ -38,10 +38,27 @@ export default function ImagePage({ uri }) {
   }, [scale, translateX, translateY]);
 
   const panResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
+    onStartShouldSetPanResponder: () => false,
+    onStartShouldSetPanResponderCapture: (e) => {
+      if (e.nativeEvent.touches.length === 1) {
+        const now = Date.now();
+        if (now - lastTapRef.current < 300) {
+          const s = scale.__getValue();
+          if (s > 1.2) {
+            animateTo(1, 0, 0);
+          } else {
+            animateTo(2.5);
+          }
+          lastTapRef.current = 0;
+        } else {
+          lastTapRef.current = now;
+        }
+      }
+      return false;
+    },
     onMoveShouldSetPanResponder: (_, gs) => {
       if (gs.numberActiveTouches === 2) return true;
-      if (baseScaleRef.current > 1) return true;
+      if (baseScaleRef.current > 1 && (Math.abs(gs.dx) > 5 || Math.abs(gs.dy) > 5)) return true;
       return false;
     },
     onPanResponderGrant: (e) => {
@@ -61,23 +78,11 @@ export default function ImagePage({ uri }) {
       }
     },
     onPanResponderRelease: () => {
-      const now = Date.now();
-      if (now - lastTapRef.current < 300) {
-        const s = scale.__getValue();
-        if (s > 1.2) {
-          animateTo(1, 0, 0);
-        } else {
-          animateTo(2.5);
-        }
-        lastTapRef.current = 0;
-        return;
-      }
-      lastTapRef.current = now;
-
       panXRef.current = translateX.__getValue();
       panYRef.current = translateY.__getValue();
       baseScaleRef.current = scale.__getValue();
     },
+    onPanResponderTerminationRequest: () => false,
   }), [animateTo, getDist, scale, translateX, translateY]);
 
   return (

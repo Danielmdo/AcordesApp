@@ -320,8 +320,22 @@ function renderPDFPageWrapper(container,page){const wrapper=document.createEleme
 function renderDocxPage(container,page){const div=document.createElement('div');div.className='page-docx';div.innerHTML=page.content;container.appendChild(div);setupDoubleTapZoom(div,null,1.8)}
 function renderPDFOnDemand(page){if(page._rendered||!page._container)return;page._rendered=true;if(page.pdfDoc){renderPDFPage(page.pdfDoc,page._container,page.pageNumber)}}
 
-function setupDoubleTapZoom(container,targetSelector,zoomScale){var lastTap=0,zoomed=false;function toggleZoom(){zoomed=!zoomed;if(targetSelector){var el=container.querySelector(targetSelector);if(!el)return;if(zoomed){el.style.transform='scale('+zoomScale+')';el.style.transformOrigin='center center'}else{el.style.transform=''}}else{if(zoomed){container.style.transform='scale('+zoomScale+')';container.style.transformOrigin='top left'}else{container.style.transform=''}}}
-container.addEventListener('touchend',function(e){if(e.changedTouches.length>1)return;var now=Date.now();if(now-lastTap<300){e.preventDefault();toggleZoom();lastTap=0}else{lastTap=now}},{passive:false});container.addEventListener('dblclick',function(){toggleZoom()})}
+function setupDoubleTapZoom(container,targetSelector,zoomScale){
+var st={zoomed:false,tx:0,ty:0,lastTap:0},dragging=false,dsx=0,dsy=0,stx=0,sty=0;
+function ap(){var el=targetSelector?container.querySelector(targetSelector):container;if(!el)return;if(st.zoomed){el.style.transform='translate('+st.tx+'px,'+st.ty+'px) scale('+zoomScale+')';el.style.transformOrigin='0 0'}else{el.style.transform=''}}
+function tz(cx,cy){st.zoomed=!st.zoomed;if(st.zoomed){var r=container.getBoundingClientRect();st.tx=r.width/2-(cx-r.left)*zoomScale;st.ty=r.height/2-(cy-r.top)*zoomScale}else{st.tx=0;st.ty=0};ap()}
+function sd(x,y){if(!st.zoomed)return;dragging=true;dsx=x;dsy=y;stx=st.tx;sty=st.ty}
+function md(x,y){if(!dragging)return;st.tx=stx+(x-dsx);st.ty=sty+(y-dsy);ap()}
+container.addEventListener('touchstart',function(e){if(e.touches.length>1)return;sd(e.touches[0].clientX,e.touches[0].clientY)},{passive:true});
+container.addEventListener('touchmove',function(e){if(e.touches.length>1)return;md(e.touches[0].clientX,e.touches[0].clientY);if(st.zoomed)e.preventDefault()},{passive:false});
+container.addEventListener('touchend',function(e){if(e.changedTouches.length>1){dragging=false;return}
+if(dragging){var dx=Math.abs(e.changedTouches[0].clientX-dsx),dy=Math.abs(e.changedTouches[0].clientY-dsy)
+if(dx<10&&dy<10){var now=Date.now();if(now-st.lastTap<300){e.preventDefault();tz(e.changedTouches[0].clientX,e.changedTouches[0].clientY);st.lastTap=0}else{st.lastTap=now}}}
+dragging=false},{passive:false});
+container.addEventListener('mousedown',function(e){if(e.button!==0)return;sd(e.clientX,e.clientY)});
+document.addEventListener('mousemove',function(e){md(e.clientX,e.clientY)});
+document.addEventListener('mouseup',function(){dragging=false});
+container.addEventListener('dblclick',function(e){tz(e.clientX,e.clientY)})}
 </script>
 <script>
 // main.js embedded

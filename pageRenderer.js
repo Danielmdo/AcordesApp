@@ -69,26 +69,99 @@ function renderPDFOnDemand(page) {
   }
 }
 
-// Shared double-tap/double-click zoom toggle
+// Zoom + pan system: double-tap/double-click to zoom, then drag to pan
 function setupDoubleTapZoom(container, targetSelector, zoomScale) {
-  var lastTap = 0, zoomed = false;
-  function toggleZoom() {
-    zoomed = !zoomed;
-    if (targetSelector) {
-      var el = container.querySelector(targetSelector);
-      if (!el) return;
-      if (zoomed) { el.style.transform = 'scale(' + zoomScale + ')'; el.style.transformOrigin = 'center center'; }
-      else { el.style.transform = ''; }
+  var state = { zoomed: false, tx: 0, ty: 0, lastTap: 0 };
+  var dragging = false, dragStartX = 0, dragStartY = 0, startTx = 0, startTy = 0;
+
+  function applyTransform() {
+    var el = targetSelector ? container.querySelector(targetSelector) : container;
+    if (!el) return;
+    if (state.zoomed) {
+      el.style.transform = 'translate(' + state.tx + 'px, ' + state.ty + 'px) scale(' + zoomScale + ')';
+      el.style.transformOrigin = '0 0';
     } else {
-      if (zoomed) { container.style.transform = 'scale(' + zoomScale + ')'; container.style.transformOrigin = 'top left'; }
-      else { container.style.transform = ''; }
+      el.style.transform = '';
     }
   }
-  container.addEventListener('touchend', function(e) {
-    if (e.changedTouches.length > 1) return;
-    var now = Date.now();
-    if (now - lastTap < 300) { e.preventDefault(); toggleZoom(); lastTap = 0; }
-    else { lastTap = now; }
+
+  function toggleZoom(clientX, clientY) {
+    state.zoomed = !state.zoomed;
+    if (state.zoomed) {
+      var rect = container.getBoundingClientRect();
+      var cx = rect.width / 2;
+      var cy = rect.height / 2;
+      state.tx = cx - (clientX - rect.left) * zoomScale;
+      state.ty = cy - (clientY - rect.top) * zoomScale;
+    } else {
+      state.tx = 0;
+      state.ty = 0;
+    }
+    applyTransform();
+  }
+
+  function startDrag(clientX, clientY) {
+    if (!state.zoomed) return;
+    dragging = true;
+    dragStartX = clientX;
+    dragStartY = clientY;
+    startTx = state.tx;
+    startTy = state.ty;
+  }
+
+  function moveDrag(clientX, clientY) {
+    if (!dragging) return;
+    state.tx = startTx + (clientX - dragStartX);
+    state.ty = startTy + (clientY - dragStartY);
+    applyTransform();
+  }
+
+  function endDrag() {
+    dragging = false;
+  }
+
+  // Touch events
+  container.addEventListener('touchstart', function(e) {
+    if (e.touches.length > 1) return;
+    startDrag(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  container.addEventListener('touchmove', function(e) {
+    if (e.touches.length > 1) return;
+    moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+    if (state.zoomed) e.preventDefault();
   }, { passive: false });
-  container.addEventListener('dblclick', function() { toggleZoom(); });
+  container.addEventListener('touchend', function(e) {
+    if (e.changedTouches.length > 1) { endDrag(); return; }
+    if (dragging) {
+      var dx = Math.abs(e.changedTouches[0].clientX - dragStartX);
+      var dy = Math.abs(e.changedTouches[0].clientY - dragStartY);
+      if (dx < 10 && dy < 10) {
+        // It was a tap, not a drag
+        var now = Date.now();
+        if (now - state.lastTap < 300) {
+          e.preventDefault();
+          toggleZoom(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+          state.lastTap = 0;
+        } else {
+          state.lastTap = now;
+        }
+      }
+    }
+    endDrag();
+  }, { passive: false });
+
+  // Mouse events
+  container.addEventListener('mousedown', function(e) {
+    if (e.button !== 0) return;
+    startDrag(e.clientX, e.clientY);
+  });
+  document.addEventListener('mousemove', function(e) {
+    moveDrag(e.clientX, e.clientY);
+  });
+  document.addEventListener('mouseup', function() {
+    endDrag();
+  });
+  container.addEventListener('dblclick', function(e) {
+    toggleZoom(e.clientX, e.clientY);
+  });
 }
