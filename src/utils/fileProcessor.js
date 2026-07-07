@@ -354,6 +354,11 @@ export function createPDFViewerHTML(base64, pageNumber, pdfJsCode) {
       box-shadow: 0 2px 12px rgba(0,0,0,0.12);
       border-radius: 4px;
       background: white;
+      transition: transform 0.25s ease;
+    }
+    canvas.zoomed {
+      transform: scale(2);
+      transform-origin: center center;
     }
     #loading, #error {
       padding: 30px;
@@ -417,6 +422,25 @@ export function createPDFViewerHTML(base64, pageNumber, pdfJsCode) {
           errorEl.textContent = 'Error: ' + err.message;
         });
     })();
+
+    // Double-tap/double-click to toggle zoom on the canvas
+    (function() {
+      var lastTap = 0;
+      var zoomed = false;
+      var el = document.getElementById('pdfContainer');
+      function toggleZoom() {
+        zoomed = !zoomed;
+        var c = document.getElementById('pdfCanvas');
+        if (c) c.classList.toggle('zoomed', zoomed);
+      }
+      el.addEventListener('touchend', function(e) {
+        if (e.changedTouches.length > 1) return;
+        var now = Date.now();
+        if (now - lastTap < 300) { e.preventDefault(); toggleZoom(); lastTap = 0; }
+        else { lastTap = now; }
+      }, { passive: false });
+      el.addEventListener('dblclick', function(e) { toggleZoom(); });
+    })();
   </script>
 </body>
 </html>`;
@@ -470,10 +494,27 @@ export function createDocxPageHTML(content) {
       border-radius: 0 4px 4px 0;
       color: #555;
     }
+    body.zoomed { transform: scale(1.8); transform-origin: top left; }
   </style>
 </head>
 <body>
-  ${content}
+  <div id="docxContent">${content}</div>
+  <script>
+    (function() {
+      var lastTap = 0, zoomed = false;
+      function toggleZoom() {
+        zoomed = !zoomed;
+        document.body.classList.toggle('zoomed', zoomed);
+      }
+      document.addEventListener('touchend', function(e) {
+        if (e.changedTouches.length > 1) return;
+        var now = Date.now();
+        if (now - lastTap < 300) { e.preventDefault(); toggleZoom(); lastTap = 0; }
+        else { lastTap = now; }
+      }, { passive: false });
+      document.addEventListener('dblclick', function() { toggleZoom(); });
+    })();
+  </script>
 </body>
 </html>`;
 }

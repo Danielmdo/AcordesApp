@@ -58,10 +58,10 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 .pager{display:flex;height:100%;transition:transform .35s cubic-bezier(.22,1,.36,1);will-change:transform}
 .pager.dragging{transition:none}
 .page{min-width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:0 6px}
-.page-image{max-width:100%;max-height:100%;object-fit:contain;border-radius:12px;background:var(--bg-card);box-shadow:var(--shadow-md)}
+.page-image-wrapper{width:100%;height:100%;display:flex;align-items:center;justify-content:center}.page-image{max-width:100%;max-height:100%;object-fit:contain;border-radius:12px;background:var(--bg-card);box-shadow:var(--shadow-md);transition:transform .25s ease}
 .page-pdf-container{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#f0f0f5;border-radius:12px;overflow:hidden;box-shadow:var(--shadow-md)}
-.page-pdf-container canvas{max-width:100%;max-height:100%;border-radius:4px;background:#fff}
-.page-docx{width:100%;height:100%;background:#fff;border-radius:12px;overflow-y:auto;padding:32px 28px;font-family:-apple-system,Georgia,'Times New Roman',serif;color:#1a1a2e;line-height:1.8;font-size:15px;box-shadow:var(--shadow-md);-webkit-overflow-scrolling:touch}
+.page-pdf-container canvas{max-width:100%;max-height:100%;border-radius:4px;background:#fff;transition:transform .25s ease}
+.page-docx{width:100%;height:100%;background:#fff;border-radius:12px;overflow-y:auto;padding:32px 28px;font-family:-apple-system,Georgia,'Times New Roman',serif;color:#1a1a2e;line-height:1.8;font-size:15px;box-shadow:var(--shadow-md);-webkit-overflow-scrolling:touch;transition:transform .25s ease}
 .page-docx p{margin-bottom:16px}
 .page-docx h1{font-size:24px;margin-top:24px;margin-bottom:12px;color:#111;font-weight:700}
 .page-docx h2{font-size:20px;margin-top:20px;margin-bottom:10px;color:#1a1a2e;font-weight:600}
@@ -315,10 +315,13 @@ function splitDocxIntoPages(html){const hasHr=/<hr\b[^>]*>/i.test(html);if(hasHr
 <script>
 // pageRenderer.js embedded
 function createPageElement(page){const div=document.createElement('div');div.className='page';div.dataset.pageId=page.id;switch(page.fileType){case'image':renderImagePage(div,page);break;case'pdf':renderPDFPageWrapper(div,page);break;case'docx':renderDocxPage(div,page);break;default:div.innerHTML='<div style="color:#999;padding:20px;">Tipo no soportado</div>'}return div}
-function renderImagePage(container,page){const img=document.createElement('img');img.className='page-image';img.src=page.url;img.alt=page.fileName;img.draggable=false;container.appendChild(img)}
-function renderPDFPageWrapper(container,page){const wrapper=document.createElement('div');wrapper.className='page-pdf-container';wrapper.id=`pdf-container-${page.id}`;container.appendChild(wrapper);page._container=wrapper;page._rendered=false;wrapper.innerHTML='<div style="padding:30px;color:#666;">Cargando p\u00e1gina...</div>'}
-function renderDocxPage(container,page){const div=document.createElement('div');div.className='page-docx';div.innerHTML=page.content;container.appendChild(div)}
+function renderImagePage(container,page){const w=document.createElement('div');w.className='page-image-wrapper';const img=document.createElement('img');img.className='page-image';img.src=page.url;img.alt=page.fileName;img.draggable=false;w.appendChild(img);container.appendChild(w);setupDoubleTapZoom(w,'.page-image',2.5)}
+function renderPDFPageWrapper(container,page){const wrapper=document.createElement('div');wrapper.className='page-pdf-container';wrapper.id=`pdf-container-${page.id}`;container.appendChild(wrapper);page._container=wrapper;page._rendered=false;wrapper.innerHTML='<div style="padding:30px;color:#666;">Cargando p\u00e1gina...</div>';setupDoubleTapZoom(wrapper,'canvas',2.5)}
+function renderDocxPage(container,page){const div=document.createElement('div');div.className='page-docx';div.innerHTML=page.content;container.appendChild(div);setupDoubleTapZoom(div,null,1.8)}
 function renderPDFOnDemand(page){if(page._rendered||!page._container)return;page._rendered=true;if(page.pdfDoc){renderPDFPage(page.pdfDoc,page._container,page.pageNumber)}}
+
+function setupDoubleTapZoom(container,targetSelector,zoomScale){var lastTap=0,zoomed=false;function toggleZoom(){zoomed=!zoomed;if(targetSelector){var el=container.querySelector(targetSelector);if(!el)return;if(zoomed){el.style.transform='scale('+zoomScale+')';el.style.transformOrigin='center center'}else{el.style.transform=''}}else{if(zoomed){container.style.transform='scale('+zoomScale+')';container.style.transformOrigin='top left'}else{container.style.transform=''}}}
+container.addEventListener('touchend',function(e){if(e.changedTouches.length>1)return;var now=Date.now();if(now-lastTap<300){e.preventDefault();toggleZoom();lastTap=0}else{lastTap=now}},{passive:false});container.addEventListener('dblclick',function(){toggleZoom()})}
 </script>
 <script>
 // main.js embedded
