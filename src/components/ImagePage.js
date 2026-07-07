@@ -58,7 +58,7 @@ export default function ImagePage({ uri }) {
     },
     onMoveShouldSetPanResponder: (_, gs) => {
       if (gs.numberActiveTouches === 2) return true;
-      if (baseScaleRef.current > 1 && (Math.abs(gs.dx) > 5 || Math.abs(gs.dy) > 5)) return true;
+      if (baseScaleRef.current > 1 && Math.abs(gs.dy) > Math.abs(gs.dx) && (Math.abs(gs.dy) > 5)) return true;
       return false;
     },
     onPanResponderGrant: (e) => {

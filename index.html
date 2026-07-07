@@ -320,14 +320,18 @@ function renderPDFPageWrapper(container,page){const wrapper=document.createEleme
 function renderDocxPage(container,page){const div=document.createElement('div');div.className='page-docx';div.innerHTML=page.content;container.appendChild(div);setupDoubleTapZoom(div,null,1.8)}
 function renderPDFOnDemand(page){if(page._rendered||!page._container)return;page._rendered=true;if(page.pdfDoc){renderPDFPage(page.pdfDoc,page._container,page.pageNumber)}}
 
+var _zDir=null;
 function setupDoubleTapZoom(container,targetSelector,zoomScale){
 var st={zoomed:false,tx:0,ty:0,lastTap:0},dragging=false,dsx=0,dsy=0,stx=0,sty=0;
 function ap(){var el=targetSelector?container.querySelector(targetSelector):container;if(!el)return;if(st.zoomed){el.style.transform='translate('+st.tx+'px,'+st.ty+'px) scale('+zoomScale+')';el.style.transformOrigin='0 0'}else{el.style.transform=''}}
 function tz(cx,cy){st.zoomed=!st.zoomed;if(st.zoomed){var r=container.getBoundingClientRect();st.tx=r.width/2-(cx-r.left)*zoomScale;st.ty=r.height/2-(cy-r.top)*zoomScale}else{st.tx=0;st.ty=0};ap()}
-function sd(x,y){if(!st.zoomed)return;dragging=true;dsx=x;dsy=y;stx=st.tx;sty=st.ty}
+function sd(x,y){if(!st.zoomed)return;dragging=true;dsx=x;dsy=y;stx=st.tx;sty=st.ty;_zDir=null}
 function md(x,y){if(!dragging)return;st.tx=stx+(x-dsx);st.ty=sty+(y-dsy);ap()}
 container.addEventListener('touchstart',function(e){if(e.touches.length>1)return;sd(e.touches[0].clientX,e.touches[0].clientY)},{passive:true});
-container.addEventListener('touchmove',function(e){if(e.touches.length>1)return;md(e.touches[0].clientX,e.touches[0].clientY);if(st.zoomed)e.preventDefault()},{passive:false});
+container.addEventListener('touchmove',function(e){if(e.touches.length>1)return;if(!dragging)return
+if(_zDir===null){var dx=e.touches[0].clientX-dsx,dy=e.touches[0].clientY-dsy;if(Math.abs(dx)>8||Math.abs(dy)>8)_zDir=Math.abs(dx)>Math.abs(dy)*1.5?'h':'v'}
+if(_zDir==='h'){dragging=false;return}
+md(e.touches[0].clientX,e.touches[0].clientY);if(st.zoomed)e.preventDefault()},{passive:false});
 container.addEventListener('touchend',function(e){if(e.changedTouches.length>1){dragging=false;return}
 if(dragging){var dx=Math.abs(e.changedTouches[0].clientX-dsx),dy=Math.abs(e.changedTouches[0].clientY-dsy)
 if(dx<10&&dy<10){var now=Date.now();if(now-st.lastTap<300){e.preventDefault();tz(e.changedTouches[0].clientX,e.changedTouches[0].clientY);st.lastTap=0}else{st.lastTap=now}}}

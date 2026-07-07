@@ -120,13 +120,29 @@ function setupDoubleTapZoom(container, targetSelector, zoomScale) {
     dragging = false;
   }
 
+  // Track direction to let horizontal swipes pass through to the pager when zoomed
+  var dragDir = null; // 'h' = horizontal (page swipe), 'v' = vertical (pan)
+
   // Touch events
   container.addEventListener('touchstart', function(e) {
     if (e.touches.length > 1) return;
+    dragDir = null;
     startDrag(e.touches[0].clientX, e.touches[0].clientY);
   }, { passive: true });
   container.addEventListener('touchmove', function(e) {
     if (e.touches.length > 1) return;
+    if (!dragging) return;
+    if (dragDir === null) {
+      var dx = e.touches[0].clientX - dragStartX;
+      var dy = e.touches[0].clientY - dragStartY;
+      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+        dragDir = Math.abs(dx) > Math.abs(dy) * 1.5 ? 'h' : 'v';
+      }
+    }
+    if (dragDir === 'h') {
+      endDrag();
+      return; // horizontal swipe → let pager handle page change
+    }
     moveDrag(e.touches[0].clientX, e.touches[0].clientY);
     if (state.zoomed) e.preventDefault();
   }, { passive: false });
@@ -136,7 +152,6 @@ function setupDoubleTapZoom(container, targetSelector, zoomScale) {
       var dx = Math.abs(e.changedTouches[0].clientX - dragStartX);
       var dy = Math.abs(e.changedTouches[0].clientY - dragStartY);
       if (dx < 10 && dy < 10) {
-        // It was a tap, not a drag
         var now = Date.now();
         if (now - state.lastTap < 300) {
           e.preventDefault();
