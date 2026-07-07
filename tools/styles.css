@@ -1,0 +1,193 @@
+:root {
+  --bg: #0f0f1a;
+  --surface: #1a1a2e;
+  --card: #1e1e3a;
+  --primary: #6c5ce7;
+  --primary-light: #a29bfe;
+  --accent: #fd79a8;
+  --text: #fff;
+  --text-secondary: #b0b0c8;
+  --text-tertiary: #6c6c8a;
+  --border: rgba(255,255,255,0.08);
+  --radius: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 40px;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.app-header h1 { font-size: 20px; font-weight: 700; }
+.app-header a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--card);
+  transition: background .2s;
+}
+.app-header a:hover { background: rgba(255,255,255,0.1); }
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 20px;
+}
+@media (max-width: 700px) {
+  .container { grid-template-columns: 1fr; }
+}
+
+/* Upload area */
+.upload-area {
+  background: var(--card);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 40px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .3s, background .3s;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.upload-area:hover, .upload-area.dragover {
+  border-color: var(--primary);
+  background: rgba(108,92,231,0.08);
+}
+.upload-area .icon { font-size: 42px; }
+.upload-area .label { font-size: 15px; color: var(--text-secondary); }
+.upload-area .hint { font-size: 12px; color: var(--text-tertiary); }
+.upload-area .file-info { font-size: 13px; color: var(--primary-light); margin-top: 4px; }
+
+/* Controls panel */
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.control-row label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  min-width: 50px;
+}
+
+select, button {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  transition: all .2s;
+}
+select:focus { outline: none; border-color: var(--primary); }
+button:hover { background: rgba(255,255,255,0.08); }
+button:active { transform: scale(.96); }
+button.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  font-weight: 600;
+}
+button.primary:hover { background: #7c6ef7; }
+button:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+.transpose-group {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.transpose-group button {
+  min-width: 36px;
+  text-align: center;
+  font-size: 13px;
+  padding: 6px 8px;
+}
+.transpose-group button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.editor-container {
+  grid-column: 1 / -1;
+}
+.editor-container textarea {
+  width: 100%;
+  min-height: 300px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  padding: 16px;
+  resize: vertical;
+  tab-size: 2;
+}
+.editor-container textarea:focus { outline: none; border-color: var(--primary); }
+
+.action-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.action-bar .spacer { flex: 1; }
+
+.status {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  padding: 8px 0;
+}
+.status.success { color: #00b894; }
+.status.error { color: #e17055; }
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--card);
+  color: var(--text);
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  border: 1px solid var(--border);
+  opacity: 0;
+  transition: all .3s;
+  pointer-events: none;
+  z-index: 100;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }

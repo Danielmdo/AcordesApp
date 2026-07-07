@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes">
+<title>Editor Musical - AcordesApp</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app-header">
+  <a href="../index.html">&larr; Volver</a>
+  <h1>🎵 Editor Musical</h1>
+</div>
+
+<div class="container">
+
+  <!-- Upload -->
+  <div>
+    <div class="upload-area" id="dropZone">
+      <div class="icon">📁</div>
+      <div class="label">Arrastra un archivo o haz clic</div>
+      <div class="hint">PDF · Imagen · DOCX</div>
+      <div class="file-info" id="fileInfo"></div>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.webp,.docx" style="display:none">
+  </div>
+
+  <!-- Controls + Editor -->
+  <div class="controls">
+
+    <div class="control-row">
+      <label>Raíz:</label>
+      <select id="rootSelect"></select>
+      <button class="primary" id="btnConvert">Convertir Grados &rarr;</button>
+    </div>
+
+    <div class="control-row">
+      <label>Transponer:</label>
+      <div class="transpose-group" id="transposeGroup"></div>
+    </div>
+
+    <div class="editor-container">
+      <div class="action-bar">
+        <div class="status" id="status">Carga un archivo para empezar</div>
+        <div class="spacer"></div>
+        <button id="btnExport" disabled>Exportar .txt</button>
+      </div>
+      <textarea id="editor" placeholder="El texto extraído aparecerá aquí. Puedes editarlo manualmente."></textarea>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="music-engine.js"></script>
+<script>
+(function() {
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const fileInfo = document.getElementById('fileInfo');
+  const rootSelect = document.getElementById('rootSelect');
+  const btnConvert = document.getElementById('btnConvert');
+  const transposeGroup = document.getElementById('transposeGroup');
+  const editor = document.getElementById('editor');
+  const btnExport = document.getElementById('btnExport');
+  const status = document.getElementById('status');
+  const toast = document.getElementById('toast');
+
+  let currentText = '';
+  let currentFileType = null;
+
+  // Populate root selector
+  MusicEngine.getAvailableRoots().forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r;
+    opt.textContent = r;
+    rootSelect.appendChild(opt);
+  });
+  rootSelect.value = 'C';
+
+  // Transpose buttons: -12 to +12 semitones
+  for (let i = -12; i <= 12; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = i > 0 ? '+' + i : String(i);
+    btn.dataset.semitones = i;
+    btn.title = (i === 0 ? 'Original' : (i > 0 ? 'Subir ' : 'Bajar ') + Math.abs(i) + ' semitonos');
+    if (i === 0) btn.classList.add('active');
+    btn.addEventListener('click', () => applyTranspose(i));
+    transposeGroup.appendChild(btn);
+  }
+
+  // Upload handlers
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+  });
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) handleFile(files[0]);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length > 0) handleFile(fileInput.files[0]);
+  });
+
+  async function handleFile(file) {
+    fileInfo.textContent = file.name;
+    status.textContent = 'Procesando archivo...';
+    status.className = 'status';
+    btnConvert.disabled = true;
+    btnExport.disabled = true;
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    try {
+      if (['jpg','jpeg','png','gif','bmp','webp'].includes(ext)) {
+        currentFileType = 'image';
+        await ocrImage(file);
+      } else if (ext === 'pdf') {
+        currentFileType = 'pdf';
+        await extractPDFText(file);
+      } else if (ext === 'docx') {
+        currentFileType = 'docx';
+        await extractDocxText(file);
+      } else {
+        setStatus('Formato no soportado: .' + ext, 'error');
+        return;
+      }
+      btnConvert.disabled = false;
+      btnExport.disabled = false;
+      setStatus('Listo. ' + editor.value.split('\n').length + ' líneas extraídas.', 'success');
+    } catch (e) {
+      console.error(e);
+      setStatus('Error: ' + e.message, 'error');
+    }
+  }
+
+  // --- PDF text extraction ---
+  async function extractPDFText(file) {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const tc = await page.getTextContent();
+      let lastY = null, line = '';
+      for (const item of tc.items) {
+        const y = Math.round(item.transform[5]);
+        if (lastY !== null && Math.abs(y - lastY) > 2) {
+          fullText += line + '\n';
+          line = '';
+        } else if (lastY !== null && line.length > 0) {
+          line += ' ';
+        }
+        line += item.str;
+        lastY = y;
+      }
+      if (line) fullText += line + '\n';
+      fullText += '\n';
+    }
+    editor.value = fullText.trim();
+    currentText = editor.value;
+  }
+
+  // --- DOCX text extraction ---
+  async function extractDocxText(file) {
+    const buf = await file.arrayBuffer();
+    const result = await mammoth.convertToHtml({ arrayBuffer: buf });
+    const div = document.createElement('div');
+    div.innerHTML = result.value;
+    const text = div.textContent || div.innerText || '';
+    editor.value = text.trim();
+    currentText = editor.value;
+  }
+
+  // --- OCR Image ---
+  async function ocrImage(file) {
+    const imgUrl = URL.createObjectURL(file);
+    try {
+      const { data } = await Tesseract.recognize(imgUrl, 'spa+eng', {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            status.textContent = 'OCR: ' + Math.round(m.progress * 100) + '%';
+          }
+        }
+      });
+      editor.value = data.text.trim();
+      currentText = editor.value;
+    } finally {
+      URL.revokeObjectURL(imgUrl);
+    }
+  }
+
+  // --- Convert degrees ---
+  btnConvert.addEventListener('click', () => {
+    const root = rootSelect.value;
+    const before = editor.value;
+    const after = MusicEngine.convertDegrees(before, root);
+    if (before !== after) {
+      const count = countChanges(before, after);
+      editor.value = after;
+      currentText = after;
+      setStatus(count + ' grado' + (count !== 1 ? 's' : '') + ' convertido' + (count !== 1 ? 's' : '') + ' (raíz ' + root + ')', 'success');
+    } else {
+      setStatus('No se detectaron grados para convertir', '');
+    }
+  });
+
+  function countChanges(before, after) {
+    const bLines = before.split('\n');
+    const aLines = after.split('\n');
+    let changes = 0;
+    for (let i = 0; i < Math.min(bLines.length, aLines.length); i++) {
+      if (bLines[i] !== aLines[i]) changes++;
+    }
+    return changes;
+  }
+
+  // --- Transpose ---
+  let currentTranspose = 0;
+
+  function applyTranspose(semitones) {
+    const text = editor.value;
+    if (!text.trim()) return;
+
+    currentTranspose = semitones;
+    const transposed = MusicEngine.transpose(currentText, semitones);
+    editor.value = transposed;
+
+    // Update active button
+    transposeGroup.querySelectorAll('button').forEach(b => b.classList.toggle('active', parseInt(b.dataset.semitones) === semitones));
+
+    const label = semitones === 0 ? 'Original' : (semitones > 0 ? '+' + semitones : String(semitones));
+    setStatus('Transpuesto ' + label + ' semitonos', '');
+  }
+
+  // --- Export ---
+  btnExport.addEventListener('click', () => {
+    const text = editor.value;
+    if (!text.trim()) return;
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'letra_acordes.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Exportado como letra_acordes.txt');
+  });
+
+  // --- Utils ---
+  function setStatus(msg, type) {
+    status.textContent = msg;
+    status.className = 'status' + (type ? ' ' + type : '');
+  }
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+
+  // Listen for manual edits to currentText
+  editor.addEventListener('input', () => {
+    currentText = editor.value;
+  });
+
+  setStatus('Carga un archivo para empezar', '');
+})();
+</script>
+</body>
+</html>
