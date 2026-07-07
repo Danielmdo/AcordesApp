@@ -328,7 +328,7 @@ export function createPDFViewerHTML(base64, pageNumber, pdfJsCode) {
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   ${scriptTag}
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -430,7 +430,7 @@ export function createDocxPageHTML(content) {
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { 

@@ -63,15 +63,17 @@ export default function PDFPage({ fileId, pageNumber }) {
       <WebView
         source={{ uri: htmlUri }}
         style={styles.webview}
-        scrollEnabled={false}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
+        scrollEnabled={true}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         allowFileAccess={true}
         allowUniversalAccessFromFileURLs={true}
         originWhitelist={['*']}
         startInLoadingState={true}
+        setBuiltInZoomControls={true}
+        setDisplayZoomControls={false}
         renderLoading={() => (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#4a6cf7" />

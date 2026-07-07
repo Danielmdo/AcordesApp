@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes,viewport-fit=cover">
 <meta name="theme-color" content="#0f0f1a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -57,7 +57,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 .pager-container{flex:1;position:relative;overflow:hidden;z-index:5}
 .pager{display:flex;height:100%;transition:transform .35s cubic-bezier(.22,1,.36,1);will-change:transform}
 .pager.dragging{transition:none}
-.page{min-width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:0 6px;overflow:hidden}
+.page{min-width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:0 6px}
 .page-image{max-width:100%;max-height:100%;object-fit:contain;border-radius:12px;background:var(--bg-card);box-shadow:var(--shadow-md)}
 .page-pdf-container{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#f0f0f5;border-radius:12px;overflow:hidden;box-shadow:var(--shadow-md)}
 .page-pdf-container canvas{max-width:100%;max-height:100%;border-radius:4px;background:#fff}
@@ -381,8 +381,8 @@ function showNavigation(){
 }
 function navigatePage(d){const n=currentIndex+d;if(n<0||n>=currentPages.length)return;currentIndex=n;updatePagerPosition();updateProgressBar();updateNavigation();updateFileInfo();renderVisiblePDFs();showNavigation()}
 function renderVisiblePDFs(){const indices=[currentIndex];if(currentIndex>0)indices.push(currentIndex-1);if(currentIndex<currentPages.length-1)indices.push(currentIndex+1);indices.forEach(i=>{const page=currentPages[i];if(page&&page.fileType==='pdf')renderPDFOnDemand(page)})}
-function handleDragStart(e){isDragging=true;dragStartX=e.touches[0].clientX;dragOffset=0;document.getElementById('pager').classList.add('dragging');showNavigation()}
-function handleDragMove(e){if(!isDragging)return;e.preventDefault();const cx=e.touches[0].clientX;dragOffset=cx-dragStartX;const p=document.getElementById('pager');p.style.transform=`translateX(${-currentIndex*100+(dragOffset/window.innerWidth)*100}%)`}
+function handleDragStart(e){if(e.touches.length>1)return;isDragging=true;dragStartX=e.touches[0].clientX;dragOffset=0;document.getElementById('pager').classList.add('dragging');showNavigation()}
+function handleDragMove(e){if(!isDragging)return;if(e.touches.length>1){isDragging=false;document.getElementById('pager').classList.remove('dragging');updatePagerPosition();return}e.preventDefault();const cx=e.touches[0].clientX;dragOffset=cx-dragStartX;const p=document.getElementById('pager');p.style.transform=`translateX(${-currentIndex*100+(dragOffset/window.innerWidth)*100}%)`}
 function handleDragEnd(){if(!isDragging)return;isDragging=false;document.getElementById('pager').classList.remove('dragging');const th=window.innerWidth*0.2;if(dragOffset<-th&&currentIndex<currentPages.length-1)currentIndex++;else if(dragOffset>th&&currentIndex>0)currentIndex--;updatePagerPosition();updateProgressBar();updateNavigation();updateFileInfo();renderVisiblePDFs();dragOffset=0}
 function handleMouseDragStart(e){if(e.button!==0)return;isDragging=true;dragStartX=e.clientX;dragOffset=0;document.getElementById('pager').classList.add('dragging');showNavigation()}
 function handleMouseDragMove(e){if(!isDragging)return;const cx=e.clientX;dragOffset=cx-dragStartX;const p=document.getElementById('pager');p.style.transform=`translateX(${-currentIndex*100+(dragOffset/window.innerWidth)*100}%)`}

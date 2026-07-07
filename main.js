@@ -275,6 +275,7 @@ function renderVisiblePDFs() {
 
 // --- Drag to swipe ---
 function handleDragStart(e) {
+  if (e.touches.length > 1) return;
   isDragging = true;
   dragStartX = e.touches[0].clientX;
   dragOffset = 0;
@@ -283,6 +284,12 @@ function handleDragStart(e) {
 
 function handleDragMove(e) {
   if (!isDragging) return;
+  if (e.touches.length > 1) {
+    isDragging = false;
+    document.getElementById('pager').classList.remove('dragging');
+    updatePagerPosition();
+    return;
+  }
   e.preventDefault();
 
   const currentX = e.touches[0].clientX;

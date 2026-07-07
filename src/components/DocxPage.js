@@ -13,12 +13,14 @@ export default function DocxPage({ content }) {
       <WebView
         source={{ html }}
         style={styles.webview}
-        scrollEnabled={false}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
+        scrollEnabled={true}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         originWhitelist={['*']}
+        setBuiltInZoomControls={true}
+        setDisplayZoomControls={false}
       />
     </View>
   );
